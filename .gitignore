@@ -1,0 +1,77 @@
+# =============================================================================
+# DEPENDENCIES - Diinstall ulang dengan `composer install` dan `npm install`
+# =============================================================================
+/vendor
+/node_modules
+
+# =============================================================================
+# ENVIRONMENT - JANGAN PERNAH DIUPLOAD (berisi password & API key)
+# =============================================================================
+.env
+.env.backup
+.env.production
+.env.local
+.env.*.local
+auth.json
+
+# =============================================================================
+# BUILD OUTPUT - Dihasilkan ulang dengan `npm run build`
+# =============================================================================
+/public/build
+/public/hot
+
+# =============================================================================
+# STORAGE - File yang dihasilkan saat runtime
+# (Subdir storage/framework/{cache,sessions,views,testing} TETAP tracked
+#  lewat .gitignore di dalamnya — supaya struktur direktori ikut ter-clone.)
+# =============================================================================
+/storage/logs/*.log
+/storage/*.key
+
+# =============================================================================
+# BOOTSTRAP CACHE - Dihasilkan ulang dengan `php artisan optimize`
+# =============================================================================
+/bootstrap/cache/*.php
+
+# =============================================================================
+# SYMLINK PUBLIK - Dibuat ulang dengan `php artisan storage:link`
+# =============================================================================
+/public/storage
+
+# =============================================================================
+# IDE & EDITOR
+# =============================================================================
+/.idea
+/.fleet
+/.vscode
+/.claude
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# SISTEM OPERASI
+# =============================================================================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =============================================================================
+# LOG & DEBUG
+# =============================================================================
+npm-debug.log
+yarn-error.log
+*.cache
+
+# =============================================================================
+# LARAVEL KHUSUS
+# =============================================================================
+Homestead.json
+Homestead.yaml
+.phpactor.json
+_ide_helper.php
+_ide_helper_models.php
+.phpstorm.meta.php

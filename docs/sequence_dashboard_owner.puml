@@ -1,0 +1,78 @@
+@startuml Sequence_Dashboard_Owner
+
+title Sequence Diagram - Melihat Dashboard Owner
+
+actor "Owner" as Owner
+boundary "OwnerDashboardView" as View
+control "OwnerDashboardController" as Controller
+entity "Transaction" as TransEntity
+entity "Expense" as ExpEntity
+entity "Room" as RoomEntity
+entity "AdminActivityLog" as LogEntity
+entity "User" as UserEntity
+
+== Mengakses Dashboard ==
+
+Owner -> View : Mengakses halaman dashboard
+View -> Controller : index(Request)
+
+== Mengambil Data Keuangan Bulan Ini ==
+
+Controller -> TransEntity : query total pemasukan bulan ini\n(status='verified_by_owner',\nsum final_amount)
+TransEntity --> Controller : totalIncome
+
+Controller -> TransEntity : query pemasukan pending\n(status='verified_by_admin',\nsum amount)
+TransEntity --> Controller : pendingIncome
+
+Controller -> TransEntity : query pemasukan bulan lalu\n(for growth percentage)
+TransEntity --> Controller : lastMonthIncome
+Controller -> Controller : hitung incomeGrowthPercent
+
+Controller -> ExpEntity : query pengeluaran manual\nbulan ini (sum amount)
+ExpEntity --> Controller : manualExpenses
+
+Controller -> Controller : hitung totalExpenses\n= manualExpenses + maintenanceExpenses
+Controller -> Controller : hitung netProfit\n= totalIncome - totalExpenses
+
+== Menghitung Proyeksi Bulan Depan ==
+
+Controller -> RoomEntity : query semua kamar\nwith roomType
+RoomEntity --> Controller : rooms
+Controller -> Controller : hitung grossPotential\n(sum harga semua kamar)
+Controller -> Controller : projectedNext\n= grossPotential - totalExpenses
+
+== Mengambil Data Arus Kas 12 Bulan ==
+
+loop bulan 1 sampai 12
+    Controller -> TransEntity : query pemasukan bulan ke-n
+    TransEntity --> Controller : incomeData[n]
+    Controller -> ExpEntity : query pengeluaran bulan ke-n
+    ExpEntity --> Controller : expenseData[n]
+end
+
+== Mengambil Status Kamar ==
+
+Controller -> RoomEntity : count total kamar (owner_id)
+RoomEntity --> Controller : totalRooms
+Controller -> RoomEntity : count kamar terisi (has occupants)
+RoomEntity --> Controller : occupiedRooms
+Controller -> RoomEntity : count kamar tersedia
+RoomEntity --> Controller : availableRooms
+Controller -> RoomEntity : count kamar maintenance
+RoomEntity --> Controller : maintenanceRooms
+Controller -> Controller : hitung occupancyRate
+
+== Mengambil Log Aktivitas & Penyewa Terbaru ==
+
+Controller -> LogEntity : query 5 log aktivitas terbaru\nwith admin
+LogEntity --> Controller : logs
+
+Controller -> UserEntity : query 5 penyewa terbaru\n(role='tenant', has room owned by owner)
+UserEntity --> Controller : recentTenants
+
+== Menampilkan Dashboard ==
+
+Controller --> View : return view('owner.dashboard', data)
+View --> Owner : Menampilkan dashboard:\n- Kartu keuangan (pemasukan, pengeluaran, laba)\n- Grafik arus kas 12 bulan\n- Status kamar & okupansi\n- Log aktivitas admin\n- Penyewa terbaru
+
+@enduml

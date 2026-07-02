@@ -1,0 +1,60 @@
+@startuml Sequence_Preview_Laporan_Owner
+
+title Sequence Diagram - Melihat Preview Laporan (Owner)
+
+actor "Owner" as Owner
+boundary "OwnerLaporanView" as View
+control "OwnerReportController" as Controller
+entity "GeneratedReport" as ReportEntity
+participant "ReportService" as Service
+
+== Owner Memilih Laporan untuk Di-preview ==
+
+Owner -> View : Klik tombol "Preview" pada laporan
+View -> Controller : preview(GeneratedReport)
+
+== Validasi Akses ==
+
+Controller -> Controller : Cek kepemilikan laporan\n(report.owner_id == Auth::id())
+Controller -> Controller : Cek status laporan\n(status != 'draft')
+
+alt Validasi Gagal: Bukan Milik Owner atau Masih Draft
+    Controller --> View : abort(403) - Forbidden
+    View --> Owner : Menampilkan halaman error 403\n"Akses Ditolak"
+else Validasi Berhasil
+
+    == Update Status Laporan (jika pertama kali dilihat) ==
+
+    alt Status Laporan = 'sent' (belum pernah dilihat)
+        Controller -> ReportEntity : update(\n  status = 'viewed',\n  viewed_at = now()\n)
+        ReportEntity --> Controller : saved
+    else Status Laporan Sudah 'viewed' / 'downloaded'
+        note right of Controller : Status tidak diubah
+    end
+
+    == Mengambil Data Laporan ==
+
+    Controller -> Controller : getReportData(report)
+
+    alt report_type = 'financial_report'
+        Controller -> Service : generateFinancialReport(owner, data)
+        Service --> Controller : reportData (data keuangan)
+    else report_type = 'room_status_report'
+        Controller -> Service : generateRoomStatusReport(owner, data)
+        Service --> Controller : reportData (status kamar)
+    else report_type = 'tenant_report'
+        Controller -> Service : generateTenantReport(owner, data)
+        Service --> Controller : reportData (data penyewa)
+    else report_type = 'comprehensive_report'
+        Controller -> Service : generateComprehensiveReport(owner, data)
+        Service --> Controller : reportData (data komprehensif)
+    end
+
+    == Menampilkan Preview ==
+
+    Controller --> View : return view('owner.laporan-preview',\nreport, reportData)
+    View --> Owner : Menampilkan halaman preview laporan\n(dengan tombol unduh PDF / Excel)
+
+end
+
+@enduml

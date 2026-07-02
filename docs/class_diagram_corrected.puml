@@ -1,0 +1,596 @@
+@startuml KosMutiara_ClassDiagram_Corrected
+
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam classFontSize 11
+skinparam classAttributeFontSize 9
+
+title Class Diagram - Sistem Manajemen Kos Mutiara 27\n(Entity - Controller - Boundary)
+
+' ===================================================================
+' ENTITY CLASSES
+' ===================================================================
+
+package "Entity Layer" #E8F4FD {
+
+    class Penyewa <<entity>> {
+        - id: int
+        - name: String
+        - email: String
+        - password: String
+        - status: enum
+        - last_login_at: datetime
+        - tenant_type: enum
+        - phone: String
+        - birth_place: String
+        - birth_date: date
+        - university: String
+        - enrollment_year: String
+        - faculty: String
+        - major: String
+        - student_card_number: String
+        - id_card_number: String
+        - id_card_photo_path: String
+        - address: text
+        - occupation: String
+        - emergency_contact_name: String
+        - emergency_contact_phone: String
+        - guardian_name: String
+        - guardian_birth_place: String
+        - guardian_birth_date: date
+        - guardian_occupation: String
+        - guardian_address: text
+        - guardian_id_card_number: String
+        - guardian_home_phone: String
+        - guardian_phone: String
+        - documents: json
+        - is_verified_by_admin: boolean
+        - status_profil: enum
+        --
+        + getData(): void
+        + updateData(): void
+    }
+
+    class Admin <<entity>> {
+        - id: int
+        - name: String
+        - email: String
+        - password: String
+        - status: enum
+        - last_login_at: datetime
+        - owner_id: int
+        - position: String
+        - phone: String
+        --
+        + getData(): void
+        + updateData(): void
+    }
+
+    class PemilikKos <<entity>> {
+        - id: int
+        - name: String
+        - email: String
+        - password: String
+        - status: enum
+        - last_login_at: datetime
+        - boarding_house_name: String
+        - late_payment_fine_per_day: Decimal
+        - late_payment_tolerance_days: int
+        - invoice_due_day: int
+        - invoice_reminder_days_before: int
+        - invoice_reminder_enabled: boolean
+        - bank_name: String
+        - bank_account_number: String
+        - bank_account_name: String
+        --
+        + getData(): void
+        + updateData(): void
+    }
+
+    class Kamar <<entity>> {
+        - id: int
+        - owner_id: int
+        - room_type_id: int
+        - room_number: String
+        - floor_number: int
+        - current_tenant_id: int
+        - current_occupants: int
+        - lease_start_date: date
+        - lease_end_date: date
+        - status: enum
+        - price_per_month: Decimal
+        - notes: text
+        --
+        + getData(): void
+        + updateData(): void
+    }
+
+    class TipeKamar <<entity>> {
+        - id: int
+        - owner_id: int
+        - name: String
+        - capacity: int
+        - description: text
+        - facilities: json
+        - image_path: String
+        - gallery_images: json
+        - price_per_month: Decimal
+        - price_per_day: Decimal
+        - unit_count: int
+        - status: enum
+        --
+        + getData(): void
+        + updateData(): void
+    }
+
+    class Transaksi <<entity>> {
+        - id: int
+        - owner_id: int
+        - tenant_id: int
+        - room_id: int
+        - amount: Decimal
+        - duration_months: int
+        - period_start_date: date
+        - period_end_date: date
+        - payment_method: String
+        - sender_bank: String
+        - sender_name: String
+        - reference_number: String
+        - payment_date: date
+        - due_date: date
+        - invoice_number: String
+        - status: enum
+        --
+        + getData(): void
+        + updateData(): void
+    }
+
+    class BuktiPembayaran <<entity>> {
+        - id: int
+        - transaction_id: int
+        - file_path: String
+        - file_type: String
+        - uploaded_by: int
+        - uploaded_at: datetime
+        - verified_status: enum
+        - verified_notes: text
+        --
+        + getData(): void
+        + updateData(): void
+    }
+
+    class Laporan <<entity>> {
+        - id: int
+        - owner_id: int
+        - admin_id: int
+        - report_type: String
+        - report_month: int
+        - end_month: int
+        - report_year: int
+        - end_year: int
+        - title: String
+        - file_path_pdf: String
+        - file_path_excel: String
+        - status: enum
+        --
+        + getData(): void
+        + updateData(): void
+    }
+
+    class Pengeluaran <<entity>> {
+        - id: int
+        - owner_id: int
+        - type: enum
+        - category: String
+        - amount: Decimal
+        - date: date
+        - description: text
+        - proof_image: String
+        --
+        + getData(): void
+        + updateData(): void
+    }
+}
+
+' ===================================================================
+' ENTITY RELATIONSHIPS (Level Desain)
+' ===================================================================
+
+' -- Composition (◆) : bagian tidak bisa ada tanpa induk --
+PemilikKos "1" *-- "0..*" Kamar : memiliki >
+PemilikKos "1" *-- "0..*" TipeKamar : mendefinisikan >
+PemilikKos "1" *-- "0..*" Pengeluaran : mencatat >
+TipeKamar "1" *-- "0..*" Kamar : mengkategorikan >
+Transaksi "1" *-- "1..*" BuktiPembayaran : memiliki >
+
+' -- Aggregation (◇) : bagian bisa exist secara independen --
+PemilikKos "1" o-- "0..*" Admin : mempekerjakan >
+
+' -- Association (──) : hubungan antar entitas independen --
+PemilikKos "1" -- "0..*" Transaksi : menerima pembayaran >
+PemilikKos "1" -- "0..*" Laporan : menerima laporan >
+Kamar "1" -- "0..*" Penyewa : ditempati oleh >
+Kamar "0..1" -- "0..*" Transaksi : terkait dengan >
+Penyewa "1" -- "0..*" Transaksi : melakukan pembayaran >
+Admin "1" -- "0..*" Laporan : membuat >
+
+' ===================================================================
+' CONTROLLER CLASSES
+' ===================================================================
+
+package "Controller Layer" #E8FDE8 {
+
+    class RegisterController <<controller>> {
+        + create(): void
+        + store(): void
+    }
+
+    class LoginController <<controller>> {
+        + create(): void
+        + store(): void
+        + destroy(): void
+    }
+
+    class ProfileController <<controller>> {
+        + requestData(): void
+        + updateData(): void
+    }
+
+    class AdminDashboardController <<controller>> {
+        + renderDashboard(): void
+    }
+
+    class AdminPenyewaController <<controller>> {
+        + requestDataPenyewa(): void
+        + showDetailPenyewa(): void
+        + verifikasiPenyewa(): void
+        + kirimPengingat(): void
+        + checkoutPenyewa(): void
+    }
+
+    class AdminAkunPenyewaController <<controller>> {
+        + createAkunPenyewaPage(): void
+        + showConfirmMessage(): void
+        + destroyAkun(): void
+    }
+
+    class AdminTransaksiController <<controller>> {
+        + requestDataTransaksi(): void
+        + verifikasiPembayaran(): void
+        + updateStatusBukti(): void
+        + simpanTransaksiManual(): void
+    }
+
+    class AdminRuanganController <<controller>> {
+        + requestDataKamar(): void
+        + createKamar(): void
+        + storeKamar(): void
+        + updateStatusKamar(): void
+        + destroyKamar(): void
+    }
+
+    class AdminLaporanController <<controller>> {
+        + requestDataLaporan(): void
+        + createLaporan(): void
+        + generateLaporan(): void
+        + submitLaporan(): void
+        + previewLaporan(): void
+        + downloadPdf(): void
+        + downloadExcel(): void
+        + destroyLaporan(): void
+    }
+
+    class PemilikKosDashboardController <<controller>> {
+        + requestDashboard(): void
+    }
+
+    class PemilikKosPenyewaController <<controller>> {
+        + requestDataPenyewa(): void
+        + showDetailPenyewa(): void
+    }
+
+    class PemilikKosTransaksiVerifikasiController <<controller>> {
+        + requestDataTransaksi(): void
+        + verifikasiPembayaran(): void
+    }
+
+    class PemilikKosLaporanController <<controller>> {
+        + requestDataLaporan(): void
+        + simpanPengeluaran(): void
+        + hapusPengeluaran(): void
+        + previewLaporan(): void
+        + downloadPdf(): void
+        + downloadExcel(): void
+    }
+
+    class PemilikKosRuanganController <<controller>> {
+        + requestDataKamar(): void
+    }
+
+    class TipeKamarController <<controller>> {
+        + requestDataTipeKamar(): void
+        + storeTipeKamar(): void
+        + updateTipeKamar(): void
+        + destroyTipeKamar(): void
+    }
+
+    class PemilikKosAdminController <<controller>> {
+        + requestDataAdmin(): void
+        + storeAdmin(): void
+        + updateAdmin(): void
+        + toggleStatusAdmin(): void
+        + resetPasswordAdmin(): void
+        + destroyAdmin(): void
+        + exportAuditLog(): void
+    }
+
+    class PemilikKosSettingsController <<controller>> {
+        + requestSettings(): void
+        + updateBusinessSettings(): void
+        + updateProfile(): void
+        + changePassword(): void
+        + updateBankSettings(): void
+    }
+
+    class AIAssistantController <<controller>> {
+        + requestChatPage(): void
+        + sendChat(): void
+        + getSessions(): void
+        + getSessionMessages(): void
+        + deleteSession(): void
+    }
+
+    class BookingController <<controller>> {
+        + storePemesanan(): void
+        + showPembayaran(): void
+        + confirmPembayaran(): void
+        + showPerpanjanganSewa(): void
+        + confirmPerpanjanganSewa(): void
+        + downloadReceipt(): void
+        + cancelTransaction(): void
+    }
+
+    class PenyewaProfilController <<controller>> {
+        + requestDashboard(): void
+        + updatePersonal(): void
+        + updateGuardian(): void
+        + updateDocuments(): void
+    }
+}
+
+' ===================================================================
+' CONTROLLER -> ENTITY DEPENDENCIES
+' ===================================================================
+
+RegisterController ..> Penyewa : <<creates>>
+LoginController ..> Penyewa
+LoginController ..> Admin
+LoginController ..> PemilikKos
+
+AdminDashboardController ..> Kamar
+AdminDashboardController ..> Transaksi
+AdminDashboardController ..> Penyewa
+
+AdminPenyewaController ..> Penyewa
+AdminAkunPenyewaController ..> Penyewa
+AdminTransaksiController ..> Transaksi
+AdminTransaksiController ..> BuktiPembayaran
+AdminRuanganController ..> Kamar
+AdminRuanganController ..> TipeKamar
+AdminLaporanController ..> Laporan
+
+PemilikKosDashboardController ..> Kamar
+PemilikKosDashboardController ..> Transaksi
+PemilikKosDashboardController ..> Penyewa
+PemilikKosPenyewaController ..> Penyewa
+PemilikKosTransaksiVerifikasiController ..> Transaksi
+PemilikKosLaporanController ..> Laporan
+PemilikKosLaporanController ..> Pengeluaran
+PemilikKosLaporanController ..> Transaksi
+PemilikKosRuanganController ..> Kamar
+PemilikKosRuanganController ..> TipeKamar
+TipeKamarController ..> TipeKamar
+PemilikKosAdminController ..> Admin
+PemilikKosSettingsController ..> PemilikKos
+AIAssistantController ..> PemilikKos
+
+BookingController ..> Transaksi
+BookingController ..> Kamar
+BookingController ..> BuktiPembayaran
+PenyewaProfilController ..> Penyewa
+
+ProfileController ..> Penyewa
+ProfileController ..> Admin
+ProfileController ..> PemilikKos
+
+' ===================================================================
+' BOUNDARY CLASSES
+' ===================================================================
+
+package "Boundary Layer" #FDE8E8 {
+
+    class RegisterPage <<boundary>> {
+        + renderForm(): void
+        + showValidationError(): void
+    }
+
+    class LoginPage <<boundary>> {
+        + renderForm(): void
+        + showAlert(): void
+    }
+
+    class AdminDashboardPage <<boundary>> {
+        + renderDashboard(): void
+        + renderStatistik(): void
+    }
+
+    class AdminDataPenyewaPage <<boundary>> {
+        + renderDataPenyewa(): void
+        + renderDetailPenyewa(): void
+        + showConfirmMessage(): void
+    }
+
+    class AdminAkunPenyewaPage <<boundary>> {
+        + renderAkunPenyewaPage(): void
+        + showConfirmMessage(): void
+    }
+
+    class AdminDataPenyewaFormPage <<boundary>> {
+        + renderDataPenyewaForm(): void
+        + renderPersonalForm(): void
+        + renderDocumentForm(): void
+    }
+
+    class EnrollPenyewaPage <<boundary>> {
+        + showConfirmMessage(): void
+        + showAlertSuccess(): void
+    }
+
+    class AdminDataTransaksiPage <<boundary>> {
+        + renderDataTransaksi(): void
+        + renderDetailTransaksi(): void
+        + showConfirmVerifikasi(): void
+    }
+
+    class AdminDataKamarPage <<boundary>> {
+        + renderDataKamar(): void
+        + renderFormKamar(): void
+        + showConfirmMessage(): void
+    }
+
+    class AdminLaporanPage <<boundary>> {
+        + renderLaporanPage(): void
+        + renderPreviewLaporan(): void
+        + renderFormGenerate(): void
+    }
+
+    class PemilikKosDashboardPage <<boundary>> {
+        + renderDashboard(): void
+        + renderMonitoring(): void
+    }
+
+    class PemilikKosDataPenyewaPage <<boundary>> {
+        + renderDataPenyewa(): void
+        + renderDetailPenyewa(): void
+    }
+
+    class PemilikKosDataTransaksiPage <<boundary>> {
+        + renderDataTransaksi(): void
+        + showConfirmVerifikasi(): void
+    }
+
+    class PemilikKosLaporanPage <<boundary>> {
+        + renderLaporanPage(): void
+        + renderPreviewLaporan(): void
+        + renderFormPengeluaran(): void
+    }
+
+    class PemilikKosKamarPage <<boundary>> {
+        + renderDataKamar(): void
+    }
+
+    class TipeKamarPage <<boundary>> {
+        + renderTipeKamarPage(): void
+        + renderFormTipeKamar(): void
+        + showConfirmMessage(): void
+    }
+
+    class PemilikKosAdminPage <<boundary>> {
+        + renderDataAdmin(): void
+        + renderFormAdmin(): void
+        + showConfirmMessage(): void
+    }
+
+    class PemilikKosSettingsPage <<boundary>> {
+        + renderSettingsPage(): void
+        + renderFormBisnis(): void
+        + renderFormProfil(): void
+        + renderFormBank(): void
+    }
+
+    class ChatView <<boundary>> {
+        + renderChatWindow(): void
+        + showResponse(): void
+        + showError(): void
+    }
+
+    class PembayaranPage <<boundary>> {
+        + renderFormPembayaran(): void
+        + renderUploadBukti(): void
+        + showConfirmMessage(): void
+    }
+
+    class FormPengajuanSewa <<boundary>> {
+        + renderFormPengajuanSewa(): void
+        + renderDetailKamar(): void
+        + showConfirmMessage(): void
+    }
+
+    class PerpanjanganSewaPage <<boundary>> {
+        + renderFormPerpanjangan(): void
+        + showConfirmMessage(): void
+    }
+
+    class PembayaranBerhasilPage <<boundary>> {
+        + renderStatusPembayaran(): void
+        + renderDownloadReceipt(): void
+    }
+
+    class PenyewaDashboardPage <<boundary>> {
+        + renderDashboard(): void
+        + renderFormPersonal(): void
+        + renderFormWali(): void
+        + renderFormDokumen(): void
+    }
+
+    class MonitoringKamarPage <<boundary>> {
+        + renderMonitoringKamar(): void
+        + renderDetailKamar(): void
+        + showForm(): void
+        + updateForm(): void
+        + showSuccess(): void
+        + showConfirmMessage(): void
+    }
+
+    class PemilikKosDataTransaksiDetailPage <<boundary>> {
+        + renderDetailTransaksi(): void
+    }
+}
+
+' ===================================================================
+' BOUNDARY -> CONTROLLER CONNECTIONS
+' ===================================================================
+
+RegisterPage ..> RegisterController
+LoginPage ..> LoginController
+
+AdminDashboardPage ..> AdminDashboardController
+AdminDataPenyewaPage ..> AdminPenyewaController
+AdminAkunPenyewaPage ..> AdminAkunPenyewaController
+AdminDataPenyewaFormPage ..> AdminPenyewaController
+EnrollPenyewaPage ..> RegisterController
+AdminDataTransaksiPage ..> AdminTransaksiController
+AdminDataKamarPage ..> AdminRuanganController
+AdminLaporanPage ..> AdminLaporanController
+
+PemilikKosDashboardPage ..> PemilikKosDashboardController
+PemilikKosDataPenyewaPage ..> PemilikKosPenyewaController
+PemilikKosDataTransaksiPage ..> PemilikKosTransaksiVerifikasiController
+PemilikKosDataTransaksiDetailPage ..> PemilikKosTransaksiVerifikasiController
+PemilikKosLaporanPage ..> PemilikKosLaporanController
+PemilikKosKamarPage ..> PemilikKosRuanganController
+TipeKamarPage ..> TipeKamarController
+PemilikKosAdminPage ..> PemilikKosAdminController
+PemilikKosSettingsPage ..> PemilikKosSettingsController
+ChatView ..> AIAssistantController
+
+FormPengajuanSewa ..> BookingController
+PembayaranPage ..> BookingController
+PerpanjanganSewaPage ..> BookingController
+PembayaranBerhasilPage ..> BookingController
+PenyewaDashboardPage ..> PenyewaProfilController
+MonitoringKamarPage ..> AdminRuanganController
+
+@enduml

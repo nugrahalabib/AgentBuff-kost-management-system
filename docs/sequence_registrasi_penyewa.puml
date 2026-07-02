@@ -1,0 +1,45 @@
+@startuml Sequence_Registrasi_Penyewa
+
+title Sequence Diagram - Registrasi Akun Penyewa
+
+actor "Penyewa" as Tenant
+boundary "RegisterView" as View
+control "RegisteredUserController" as Controller
+entity "User" as UserEntity
+
+== Menampilkan Form Registrasi ==
+
+Tenant -> View : Mengakses halaman registrasi
+View -> Controller : create()
+Controller -> View : return view('auth.register')
+View --> Tenant : Menampilkan form registrasi\n(nama, email, password, konfirmasi password)
+
+== Mengisi dan Mengirim Form ==
+
+Tenant -> View : Mengisi data registrasi\n(name, email, password, password_confirmation)
+View -> View : Validasi input client-side
+Tenant -> View : Klik "Daftar Sekarang"
+View -> Controller : store(Request)
+
+== Validasi Data ==
+
+Controller -> Controller : validate()\n- name: required, string, max:255\n- email: required, email, unique\n- password: required, confirmed
+
+alt Validasi Gagal
+    Controller --> View : Redirect back with errors
+    View --> Tenant : Menampilkan pesan error validasi
+else Validasi Berhasil
+    
+    == Proses Pembuatan Akun ==
+    
+    Controller -> UserEntity : User::create(\n  name, email, \n  Hash::make(password)\n)
+    UserEntity --> Controller : return User object
+    
+    Controller -> Controller : event(new Registered($user))
+    Controller -> Controller : Auth::login($user)
+    
+    Controller --> View : redirect(route('dashboard'))
+    View --> Tenant : Redirect ke halaman dashboard penyewa
+end
+
+@enduml

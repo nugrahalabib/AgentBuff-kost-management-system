@@ -1,0 +1,845 @@
+@startuml KosMutiara_ClassDiagram_Design
+
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+title Class Diagram Fase Analisis & Desain - Sistem Manajemen Kos Mutiara\n(Entity - Control - Boundary)
+
+' ===================================================================
+' ENTITY CLASSES
+' ===================================================================
+
+package "Entity Layer" #E8F4FD {
+    
+    class User <<entity>> {
+        -id: int
+        -name: string
+        -email: string
+        -role: string
+        -status: string
+        -password: string
+        -last_login_at: datetime
+        --
+        +tenantProfile(): TenantProfile
+        +adminProfile(): AdminProfile
+        +ownedRooms(): Collection
+        +notifications(): Collection
+    }
+    
+    class TenantProfile <<entity>> {
+        -id: int
+        -user_id: int
+        -tenant_type: string
+        -phone: string
+        -id_card_number: string
+        -birth_place: string
+        -birth_date: date
+        -university: string
+        -major: string
+        -guardian_name: string
+        -guardian_phone: string
+        -guardian_address: string
+        -address: string
+        -id_card_file: string
+        -photo_file: string
+        -status: string
+        -is_verified_by_admin: bool
+        --
+        +user(): User
+        +isComplete(): bool
+        +getMissingFields(): array
+    }
+    
+    class AdminProfile <<entity>> {
+        -id: int
+        -user_id: int
+        -owner_id: int
+        -position: string
+        -phone: string
+        -address: string
+        -hire_date: date
+        -deactivated_at: datetime
+        --
+        +user(): User
+        +owner(): User
+    }
+    
+    class BusinessSetting <<entity>> {
+        -id: int
+        -owner_id: int
+        -boarding_house_name: string
+        -late_payment_fine_per_day: decimal
+        -late_payment_tolerance_days: int
+        -invoice_due_day: int
+        -invoice_reminder_days_before: int
+        -invoice_reminder_enabled: bool
+        -bank_name: string
+        -bank_account_number: string
+        -bank_account_name: string
+        --
+        +owner(): User
+    }
+    
+    class RoomType <<entity>> {
+        -id: int
+        -owner_id: int
+        -name: string
+        -capacity: int
+        -facilities: json
+        -price_per_month: decimal
+        -rent_per_person: decimal
+        -description: string
+        -image_path: string
+        -status: string
+        --
+        +owner(): User
+        +rooms(): Collection
+    }
+    
+    class Room <<entity>> {
+        -id: int
+        -owner_id: int
+        -room_type_id: int
+        -room_number: string
+        -floor_number: int
+        -status: string
+        -price_per_month: decimal
+        --
+        +owner(): User
+        +roomType(): RoomType
+        +occupants(): Collection
+        +transactions(): Collection
+    }
+    
+    class RoomOccupant <<entity>> {
+        -id: int
+        -room_id: int
+        -user_id: int
+        -check_in_date: date
+        -check_out_date: date
+        --
+        +room(): Room
+        +user(): User
+    }
+    
+    class Transaction <<entity>> {
+        -id: int
+        -owner_id: int
+        -tenant_id: int
+        -room_id: int
+        -amount: decimal
+        -final_amount: decimal
+        -invoice_number: string
+        -type: string
+        -status: string
+        -payment_date: date
+        -period_start_date: date
+        -period_end_date: date
+        -duration_months: int
+        -notes: string
+        --
+        +owner(): User
+        +tenant(): User
+        +room(): Room
+        +paymentProofs(): Collection
+    }
+    
+    class PaymentProof <<entity>> {
+        -id: int
+        -transaction_id: int
+        -uploaded_by: int
+        -file_path: string
+        -file_type: string
+        -verified_status: string
+        --
+        +transaction(): Transaction
+        +uploader(): User
+    }
+    
+    class Expense <<entity>> {
+        -id: int
+        -owner_id: int
+        -type: string
+        -category: string
+        -description: string
+        -amount: decimal
+        -date: date
+        --
+        +owner(): User
+    }
+    
+    class GeneratedReport <<entity>> {
+        -id: int
+        -owner_id: int
+        -admin_id: int
+        -report_type: string
+        -report_month: int
+        -report_year: int
+        -pdf_path: string
+        -excel_path: string
+        -status: string
+        -submitted_at: datetime
+        --
+        +owner(): User
+        +admin(): User
+    }
+    
+    class AIChatSession <<entity>> {
+        -id: int
+        -user_id: int
+        -title: string
+        --
+        +user(): User
+        +messages(): Collection
+    }
+    
+    class AIChatMessage <<entity>> {
+        -id: int
+        -ai_chat_session_id: int
+        -role: string
+        -content: string
+        --
+        +session(): AIChatSession
+    }
+    
+    class Notification <<entity>> {
+        -id: int
+        -user_id: int
+        -type: string
+        -category: string
+        -message: string
+        -status: string
+        -read_at: datetime
+        --
+        +user(): User
+        +relatedEntity(): mixed
+    }
+    
+    class AdminActivityLog <<entity>> {
+        -id: int
+        -admin_id: int
+        -owner_id: int
+        -activity_type: string
+        -description: string
+        -old_data: json
+        -new_data: json
+        --
+        +admin(): User
+        +owner(): User
+    }
+
+    class ContentSection <<entity>> {
+        -id: int
+        -owner_id: int
+        -section_key: string
+        -content: json
+        --
+        +items(): Collection
+        +galleries(): Collection
+        +facilities(): Collection
+        +contacts(): Collection
+    }
+
+    class ContentGallery <<entity>> {
+        -id: int
+        -section_id: int
+        -title: string
+        -description: string
+        -images: json
+        -is_active: bool
+        --
+        +section(): ContentSection
+    }
+
+    class ContentFacility <<entity>> {
+        -id: int
+        -section_id: int
+        -facility_name: string
+        -description: string
+        -icon: string
+        -icon_color: string
+        -is_active: bool
+        --
+        +section(): ContentSection
+    }
+
+    class ContentContact <<entity>> {
+        -id: int
+        -section_id: int
+        -contact_type: string
+        -contact_value: string
+        -label: string
+        -is_active: bool
+        --
+        +section(): ContentSection
+    }
+
+    class PasswordHistory <<entity>> {
+        -id: int
+        -user_id: int
+        -old_password_hash: string
+        -changed_at: datetime
+        -changed_from_ip: string
+        -changed_from_user_agent: string
+        --
+        +user(): User
+    }
+}
+
+' ENTITY RELATIONSHIPS
+User "1" o-- "0..1" TenantProfile
+User "1" o-- "0..1" AdminProfile
+User "1" o-- "0..1" BusinessSetting
+User "1" o-- "0..*" Room
+User "1" o-- "0..*" RoomType
+User "1" o-- "0..*" Transaction
+User "1" o-- "0..*" Expense
+User "1" o-- "0..*" GeneratedReport
+User "1" o-- "0..*" AIChatSession
+User "1" o-- "0..*" Notification
+User "1" o-- "0..*" AdminActivityLog
+User "1" o-- "0..*" RoomOccupant
+User "1" o-- "0..*" PasswordHistory
+
+RoomType "1" o-- "0..*" Room
+Room "1" *-- "0..*" RoomOccupant
+Room "1" o-- "0..*" Transaction
+Transaction "1" *-- "1..*" PaymentProof
+AIChatSession "1" *-- "0..*" AIChatMessage
+
+ContentSection "1" *-- "0..*" ContentGallery
+ContentSection "1" *-- "0..*" ContentFacility
+ContentSection "1" *-- "0..*" ContentContact
+
+' ===================================================================
+' CONTROLLER CLASSES
+' ===================================================================
+
+package "Controller Layer" #E8FDE8 {
+    
+    class AuthenticatedSessionController <<controller>> {
+        +create(): void
+        +store(Request): void
+        +destroy(Request): void
+    }
+    
+    class RegisteredUserController <<controller>> {
+        +create(): void
+        +store(Request): void
+    }
+
+    class PasswordController <<controller>> {
+        +update(Request): void
+    }
+
+    class ProfileController <<controller>> {
+        +edit(Request): void
+        +update(ProfileUpdateRequest): void
+        +destroy(Request): void
+    }
+    
+    class AdminDashboardController <<controller>> {
+        +index(): void
+    }
+
+    class AdminRoomController <<controller>> {
+        +index(Request): void
+        +create(): void
+        +store(Request): void
+        +updateStatus(Request, Room): void
+        +destroy(Request, Room): void
+    }
+    
+    class AdminTenantController <<controller>> {
+        +index(Request): void
+        +show(User): void
+        +unverified(): void
+        +verify(Request, User): void
+        +sendReminder(Request, User): void
+        +checkout(User): void
+    }
+    
+    class AdminTransactionController <<controller>> {
+        +index(Request): void
+        +verifyPayment(Request, Transaction): void
+        +updateProofStatus(Request, PaymentProof): void
+        +storeManual(Request): void
+    }
+    
+    class AdminReportController <<controller>> {
+        +__construct(ReportService)
+        +index(Request): void
+        +create(): void
+        +generate(Request): void
+        +submit(Request, GeneratedReport): void
+        +preview(GeneratedReport): void
+        +downloadPdf(GeneratedReport): void
+        +downloadExcel(GeneratedReport): void
+        +destroy(GeneratedReport): void
+        +getReportData(GeneratedReport): void
+        +generateReportFiles(GeneratedReport, reportData, reportType): void
+    }
+    
+    class AdminContentController <<controller>> {
+        +index(): void
+        +editHero(): void
+        +updateHero(Request): void
+        +editGallery(): void
+        +storeGallery(Request): void
+        +updateGallery(Request, ContentGallery): void
+        +updateGallerySection(Request): void
+        +deleteGallery(ContentGallery): void
+        +editFacilities(): void
+        +storeFacility(Request): void
+        +updateFacility(Request, ContentFacility): void
+        +updateFacilitiesSection(Request): void
+        +deleteFacility(ContentFacility): void
+        +editContact(): void
+        +storeContact(Request): void
+        +updateContact(Request, ContentContact): void
+        +deleteContact(ContentContact): void
+        +updateContactSection(Request): void
+    }
+
+    class AdminAccountController <<controller>> {
+        +index(Request): void
+        +destroy(User): void
+    }
+
+    class AdminNotificationController <<controller>> {
+        +index(): void
+        +byCategory(category): void
+        +markAsRead(Notification): void
+        +archive(Notification): void
+    }
+    
+    class OwnerDashboardController <<controller>> {
+        +index(Request): void
+    }
+
+    class OwnerRoomController <<controller>> {
+        +index(Request): void
+    }
+    
+    class OwnerRoomTypeController <<controller>> {
+        +index(): void
+        +store(Request): void
+        +update(Request, RoomType): void
+        +destroy(Request, RoomType): void
+    }
+    
+    class OwnerTenantController <<controller>> {
+        +index(Request): void
+        +show(User): void
+    }
+    
+    class OwnerTransactionVerificationController <<controller>> {
+        +index(Request): void
+        +verify(Request, Transaction): void
+    }
+    
+    class OwnerReportController <<controller>> {
+        +__construct(ReportService)
+        +index(Request): void
+        +buildUnifiedLedger(request, owner, month, year): void
+        +buildFinancialSummary(...): void
+        +storeExpense(Request): void
+        +destroyExpense(Expense): void
+        +preview(GeneratedReport): void
+        +downloadPdf(GeneratedReport): void
+        +downloadExcel(GeneratedReport): void
+        +getReportData(GeneratedReport): void
+    }
+    
+    class OwnerAdminManagementController <<controller>> {
+        +index(): void
+        +store(Request): void
+        +update(Request, User): void
+        +toggleStatus(Request, User): void
+        +resetPassword(Request, User): void
+        +destroy(User): void
+        +exportAuditLog(Request): void
+    }
+    
+    class OwnerSettingsController <<controller>> {
+        +index(): void
+        +updateBusinessSettings(Request): void
+        +updateProfile(Request): void
+        +changePassword(Request): void
+        +activityLogs(): void
+        +updateBankSettings(Request): void
+        +updateAll(Request): void
+    }
+    
+    class OwnerAiAssistantController <<controller>> {
+        +index(): void
+        +chat(Request): void
+        +getSessions(): void
+        +getSessionMessages(id): void
+        +renameSession(Request, id): void
+        +deleteSession(id): void
+        +healthCheck(): void
+    }
+
+    class OwnerNotificationController <<controller>> {
+        +index(): void
+        +archive(Notification): void
+    }
+    
+    class TenantBookingController <<controller>> {
+        +store(Request, id): void
+        +showPayment(): void
+        +confirmPayment(Request): void
+        -generateInvoiceNumber(): string
+        +showExtendPayment(): void
+        +storeExtendPayment(Request): void
+        +confirmExtendPayment(Request): void
+        +downloadReceipt(id): void
+        +showRetryPayment(transactionId): void
+        +confirmRetryPayment(Request, transactionId): void
+        +cancelTransaction(transactionId): void
+    }
+    
+    class TenantProfileController <<controller>> {
+        +dashboard(): void
+        +dismissNotification(id): void
+        +updatePersonal(Request): void
+        +updateGuardian(Request): void
+        +updateDocuments(Request): void
+    }
+    
+    class WelcomeController <<controller>> {
+        +index(): void
+    }
+}
+
+' CONTROLLER -> ENTITY DEPENDENCIES
+AuthenticatedSessionController ..> User
+RegisteredUserController ..> User
+RegisteredUserController ..> TenantProfile
+ProfileController ..> User
+
+AdminRoomController ..> Room
+AdminRoomController ..> RoomType
+
+AdminTenantController ..> User
+AdminTenantController ..> TenantProfile
+AdminTenantController ..> RoomOccupant
+AdminTenantController ..> Notification
+
+AdminTransactionController ..> Transaction
+AdminTransactionController ..> PaymentProof
+AdminTransactionController ..> Notification
+
+AdminReportController ..> GeneratedReport
+AdminReportController ..> Transaction
+AdminReportController ..> Expense
+
+AdminContentController ..> ContentSection
+AdminContentController ..> ContentGallery
+AdminContentController ..> ContentFacility
+AdminContentController ..> ContentContact
+
+AdminAccountController ..> User
+AdminAccountController ..> TenantProfile
+
+AdminNotificationController ..> Notification
+
+OwnerRoomController ..> Room
+OwnerRoomController ..> RoomType
+
+OwnerRoomTypeController ..> RoomType
+
+OwnerTenantController ..> User
+OwnerTenantController ..> Transaction
+
+OwnerTransactionVerificationController ..> Transaction
+OwnerTransactionVerificationController ..> PaymentProof
+OwnerTransactionVerificationController ..> Notification
+
+OwnerReportController ..> GeneratedReport
+OwnerReportController ..> Transaction
+OwnerReportController ..> Expense
+OwnerReportController ..> Room
+
+OwnerAdminManagementController ..> User
+OwnerAdminManagementController ..> AdminProfile
+OwnerAdminManagementController ..> AdminActivityLog
+
+OwnerSettingsController ..> BusinessSetting
+OwnerSettingsController ..> User
+OwnerSettingsController ..> PasswordHistory
+OwnerSettingsController ..> AdminActivityLog
+
+OwnerAiAssistantController ..> AIChatSession
+OwnerAiAssistantController ..> AIChatMessage
+OwnerAiAssistantController ..> Transaction
+OwnerAiAssistantController ..> Expense
+
+OwnerNotificationController ..> Notification
+
+TenantBookingController ..> Transaction
+TenantBookingController ..> PaymentProof
+TenantBookingController ..> Room
+TenantBookingController ..> RoomType
+
+TenantProfileController ..> TenantProfile
+TenantProfileController ..> Notification
+
+WelcomeController ..> RoomType
+WelcomeController ..> ContentSection
+WelcomeController ..> ContentFacility
+WelcomeController ..> ContentGallery
+WelcomeController ..> ContentContact
+
+' ===================================================================
+' BOUNDARY CLASSES (View)
+' ===================================================================
+
+package "Boundary Layer" #FDF5E6 {
+    
+    class LoginView <<boundary>> {
+        +renderForm()
+        +validateInput()
+        +showError()
+        +redirectOnSuccess()
+    }
+    
+    class RegisterView <<boundary>> {
+        +renderForm()
+        +validateInput()
+        +showError()
+        +redirectOnSuccess()
+    }
+    
+    class AdminDashboardView <<boundary>> {
+        +renderStatsCards()
+        +renderRecentTransactions()
+        +renderOccupancyChart()
+        +renderRevenueChart()
+        +renderDueTenantsPanel()
+        +renderLatestNotifications()
+    }
+    
+    class AdminKamarView <<boundary>> {
+        +renderRoomTable()
+        +renderFilterForm()
+        +renderCreateModal()
+        +renderEditModal()
+        +renderDeleteModal()
+        +handleStatusChange()
+    }
+    
+    class AdminPenyewaView <<boundary>> {
+        +renderTenantTable()
+        +renderSearchForm()
+        +renderDetailModal()
+        +renderVerifyButton()
+        +renderSendReminderButton()
+        +renderCheckoutButton()
+    }
+    
+    class AdminTransaksiView <<boundary>> {
+        +renderTransactionTable()
+        +renderFilterForm()
+        +renderVerifyModal()
+        +renderProofViewer()
+        +renderManualPaymentForm()
+    }
+    
+    class AdminLaporanView <<boundary>> {
+        +renderReportList()
+        +renderCreateForm()
+        +renderPreviewModal()
+        +handleDownloadPdf()
+        +handleDownloadExcel()
+        +handleSubmit()
+    }
+
+    class AdminKontenView <<boundary>> {
+        +renderContentDashboard()
+        +renderHeroEditor()
+        +renderGalleryManager()
+        +renderFacilitiesManager()
+        +renderContactManager()
+    }
+
+    class AdminAkunPenyewaView <<boundary>> {
+        +renderTenantAccountTable()
+        +renderSearchFilter()
+        +renderDeleteConfirmation()
+    }
+
+    class AdminNotifikasiView <<boundary>> {
+        +renderNotificationList()
+        +renderCategoryFilter()
+        +renderMarkAsReadButton()
+        +renderArchiveButton()
+    }
+    
+    class OwnerDashboardView <<boundary>> {
+        +renderRevenueChart()
+        +renderOccupancyStats()
+        +renderExpenseOverview()
+        +renderCashflowChart()
+        +renderRecentTenants()
+        +renderActivityLogs()
+    }
+
+    class OwnerKamarView <<boundary>> {
+        +renderRoomGrid()
+        +renderRoomList()
+        +renderFilterForm()
+        +renderRoomStats()
+    }
+
+    class OwnerTipeKamarView <<boundary>> {
+        +renderRoomTypeTable()
+        +renderCreateModal()
+        +renderEditModal()
+        +renderDeleteModal()
+    }
+
+    class OwnerPenyewaView <<boundary>> {
+        +renderTenantTable()
+        +renderSearchFilter()
+        +renderTenantDetail()
+    }
+    
+    class OwnerVerifikasiView <<boundary>> {
+        +renderPendingTable()
+        +renderProofViewer()
+        +renderApproveButton()
+        +renderRejectButton()
+        +renderNotesInput()
+    }
+    
+    class OwnerLaporanView <<boundary>> {
+        +renderReportDashboard()
+        +renderCashflowTable()
+        +renderFinancialSummary()
+        +renderExpenseForm()
+        +renderPreviewPanel()
+        +handleDownloadPdf()
+        +handleDownloadExcel()
+    }
+    
+    class OwnerSettingsView <<boundary>> {
+        +renderProfileForm()
+        +renderBusinessSettingsForm()
+        +renderBankDetailsForm()
+        +renderPasswordChangeForm()
+        +renderActivityLogs()
+        +handleMasterSave()
+    }
+    
+    class OwnerAiView <<boundary>> {
+        +renderChatWindow()
+        +renderMessageInput()
+        +renderSessionList()
+        +handleSendMessage()
+        +handleNewSession()
+        +handleDeleteSession()
+    }
+    
+    class OwnerKelolaAdminView <<boundary>> {
+        +renderAdminTable()
+        +renderAddModal()
+        +renderEditModal()
+        +renderDeleteModal()
+        +renderResetPasswordModal()
+        +renderToggleStatusButton()
+        +renderAuditLogExport()
+    }
+
+    class OwnerNotifikasiView <<boundary>> {
+        +renderNotificationList()
+        +renderCategoryFilter()
+        +renderArchiveButton()
+    }
+    
+    class TenantDashboardView <<boundary>> {
+        +renderWelcomeCard()
+        +renderRoomInfo()
+        +renderProfileProgress()
+        +renderActiveInvoice()
+        +renderTransactionHistory()
+        +renderNotifications()
+    }
+
+    class TenantPaymentView <<boundary>> {
+        +renderRoomDetail()
+        +renderDurationForm()
+        +renderPriceCalculation()
+        +renderUploadForm()
+        +renderBankInfo()
+    }
+
+    class TenantPaymentSuccessView <<boundary>> {
+        +renderSuccessIcon()
+        +renderInvoiceSummary()
+        +renderDownloadReceiptButton()
+        +renderGoToDashboardButton()
+    }
+
+    class TenantExtendPaymentView <<boundary>> {
+        +renderCurrentRoomInfo()
+        +renderDurationOptions()
+        +renderPriceBreakdown()
+        +renderUploadProofForm()
+    }
+
+    class TenantRetryPaymentView <<boundary>> {
+        +renderRejectedTransactionInfo()
+        +renderReuploadForm()
+        +renderCancelButton()
+    }
+    
+    class TenantProfilView <<boundary>> {
+        +renderPersonalInfoForm()
+        +renderGuardianInfoForm()
+        +renderDocumentUploader()
+        +renderProgressIndicator()
+    }
+    
+    class WelcomeView <<boundary>> {
+        +renderHeroSection()
+        +renderGallerySection()
+        +renderFacilitiesSection()
+        +renderRoomTypesSection()
+        +renderContactSection()
+    }
+}
+
+' CONTROLLER -> BOUNDARY
+AuthenticatedSessionController --> LoginView
+RegisteredUserController --> RegisterView
+AdminDashboardController --> AdminDashboardView
+AdminRoomController --> AdminKamarView
+AdminTenantController --> AdminPenyewaView
+AdminTransactionController --> AdminTransaksiView
+AdminReportController --> AdminLaporanView
+AdminContentController --> AdminKontenView
+AdminAccountController --> AdminAkunPenyewaView
+AdminNotificationController --> AdminNotifikasiView
+OwnerDashboardController --> OwnerDashboardView
+OwnerRoomController --> OwnerKamarView
+OwnerRoomTypeController --> OwnerTipeKamarView
+OwnerTenantController --> OwnerPenyewaView
+OwnerTransactionVerificationController --> OwnerVerifikasiView
+OwnerReportController --> OwnerLaporanView
+OwnerSettingsController --> OwnerSettingsView
+OwnerAiAssistantController --> OwnerAiView
+OwnerAdminManagementController --> OwnerKelolaAdminView
+OwnerNotificationController --> OwnerNotifikasiView
+TenantBookingController --> TenantPaymentView
+TenantBookingController --> TenantPaymentSuccessView
+TenantBookingController --> TenantExtendPaymentView
+TenantBookingController --> TenantRetryPaymentView
+TenantProfileController --> TenantDashboardView
+TenantProfileController --> TenantProfilView
+WelcomeController --> WelcomeView
+
+@enduml

@@ -1,0 +1,176 @@
+@startuml Sequence_Reservasi_Kamar_Penyewa
+
+title Sequence Diagram - Reservasi Kamar (Penyewa)
+
+actor "Penyewa" as Tenant
+boundary "WelcomeView" as WelcomeView
+boundary "TenantPaymentView" as PayView
+boundary "TenantPaymentSuccessView" as SuccessView
+control "WelcomeController" as WelcomeCtrl
+control "TenantBookingController" as BookingCtrl
+entity "RoomType" as RoomTypeEntity
+entity "Room" as RoomEntity
+entity "User" as UserEntity
+entity "TenantProfile" as ProfileEntity
+entity "Transaction" as TransEntity
+entity "PaymentProof" as ProofEntity
+entity "Notification" as NotifEntity
+
+== Penyewa Melihat Tipe Kamar ==
+
+Tenant -> WelcomeView : Mengakses halaman utama
+WelcomeView -> WelcomeCtrl : index()
+WelcomeCtrl -> RoomTypeEntity : query tipe kamar aktif
+RoomTypeEntity --> WelcomeCtrl : daftar tipe kamar
+WelcomeCtrl --> WelcomeView : return view('welcome', roomTypes)
+WelcomeView --> Tenant : Menampilkan daftar tipe kamar\n(nama, harga, fasilitas)
+
+== Penyewa Mengisi Form Booking ==
+
+Tenant -> WelcomeView : Memilih tipe kamar\n+ isi no. telepon, tanggal check-in, durasi
+Tenant -> WelcomeView : Klik "Pesan Sekarang"
+WelcomeView -> BookingCtrl : store(Request, id)
+
+BookingCtrl -> UserEntity : Cek apakah sudah punya kamar\n(user->activeRoom)
+
+alt Sudah Punya Kamar Aktif
+    BookingCtrl --> WelcomeView : redirect ke halaman perpanjang sewa\ndengan pesan error
+    WelcomeView --> Tenant : Redirect ke halaman extend payment\n"Silakan perpanjang durasi sewa"
+else Belum Punya Kamar
+
+    BookingCtrl -> TransEntity : Cek transaksi ditolak\n(status = rejected_by_admin\n/ rejected_by_owner)
+
+    alt Ada Transaksi yang Ditolak
+        BookingCtrl --> WelcomeView : redirect ke halaman retry payment
+        WelcomeView --> Tenant : Redirect ke upload ulang bukti bayar\n"Selesaikan pembayaran yang ditolak"
+    else Tidak Ada Transaksi Ditolak
+
+        BookingCtrl -> BookingCtrl : validate(\n  phone: required,\n  check_in_date: required, date,\n  duration: required, in:1,3,6,12\n)
+
+        alt Validasi Gagal
+            BookingCtrl --> WelcomeView : redirect back with errors
+            WelcomeView --> Tenant : Menampilkan pesan error validasi
+        else Validasi Berhasil
+
+            BookingCtrl -> ProfileEntity : Update/simpan no. telepon\nke TenantProfile
+            ProfileEntity --> BookingCtrl : saved
+
+            BookingCtrl -> RoomTypeEntity : RoomType::findOrFail(id)
+            RoomTypeEntity --> BookingCtrl : roomType object
+
+            BookingCtrl -> BookingCtrl : Hitung total\n= rent_per_person × durasi
+
+            BookingCtrl -> BookingCtrl : generateInvoiceNumber()\nformat: INV-YYMM-XXXXX
+            BookingCtrl -> TransEntity : Ambil invoice terakhir bulan ini
+            TransEntity --> BookingCtrl : last invoice number
+            BookingCtrl -> BookingCtrl : Increment nomor invoice
+
+            BookingCtrl -> BookingCtrl : Simpan data ke session('booking')\n(room_type_id, check_in_date,\nduration, total_amount, invoice)
+
+            BookingCtrl --> PayView : redirect ke halaman pembayaran
+        end
+    end
+end
+
+== Penyewa Melihat Halaman Pembayaran ==
+
+PayView -> BookingCtrl : showPayment()
+
+BookingCtrl -> BookingCtrl : Ambil data dari session('booking')
+
+alt Session Booking Tidak Ditemukan
+    BookingCtrl --> WelcomeView : redirect ke halaman welcome
+    WelcomeView --> Tenant : "Sesi booking tidak ditemukan.\nSilakan mulai dari awal."
+else Session Ditemukan
+
+    BookingCtrl -> UserEntity : Ambil data owner\n& business settings (info bank)
+    UserEntity --> BookingCtrl : owner, businessSettings
+
+    BookingCtrl --> PayView : return view('tenant.payment',\nbooking, owner, businessSettings)
+    PayView --> Tenant : Menampilkan halaman pembayaran:\n- Ringkasan pesanan\n- Info bank tujuan transfer\n- Form upload bukti bayar
+end
+
+== Penyewa Upload Bukti Pembayaran ==
+
+Tenant -> PayView : Upload bukti transfer\n+ isi bank pengirim & nama pengirim
+Tenant -> PayView : Klik "Konfirmasi Pembayaran"
+PayView -> BookingCtrl : confirmPayment(Request)
+
+BookingCtrl -> BookingCtrl : validate(\n  payment_proof: required, image,\n    mimes: jpg/jpeg/png, max:2048,\n  sender_bank: required,\n  sender_name: required\n)
+
+alt Validasi Gagal
+    BookingCtrl --> PayView : JSON error response
+    PayView --> Tenant : Menampilkan pesan error validasi
+else Validasi Berhasil
+
+    BookingCtrl -> TransEntity : Cek transaksi ditolak
+    alt Ada Transaksi Ditolak
+        BookingCtrl --> PayView : JSON error 400
+        PayView --> Tenant : "Selesaikan pembayaran\nyang ditolak terlebih dahulu"
+    else Tidak Ada Transaksi Ditolak
+
+        BookingCtrl -> BookingCtrl : Ambil data dari session('booking')
+
+        alt Session Tidak Ditemukan
+            BookingCtrl --> PayView : JSON error 400
+            PayView --> Tenant : "Sesi booking tidak ditemukan"
+        else Session Ditemukan
+
+            BookingCtrl -> BookingCtrl : DB::beginTransaction()
+
+            BookingCtrl -> UserEntity : Ambil data owner
+            UserEntity --> BookingCtrl : owner object
+
+            alt Room ID tersedia di session
+                BookingCtrl -> RoomEntity : Room::find(room_id)
+                RoomEntity --> BookingCtrl : room object
+            else Room ID tidak tersedia
+                BookingCtrl -> RoomTypeEntity : RoomType::findOrFail(room_type_id)
+                RoomTypeEntity --> BookingCtrl : roomType
+                BookingCtrl -> RoomEntity : Cari kamar tersedia\n(hasAvailableSlot)
+                RoomEntity --> BookingCtrl : room object
+            end
+
+            BookingCtrl -> RoomEntity : Cek slot tersedia\n(room->hasAvailableSlot)
+
+            alt Kamar Tidak Tersedia / Penuh
+                BookingCtrl -> BookingCtrl : throw Exception\n"Kamar tidak tersedia"
+                BookingCtrl -> BookingCtrl : DB::rollBack()
+                BookingCtrl --> PayView : JSON error 500
+                PayView --> Tenant : "Kamar tidak tersedia\natau sudah penuh"
+            else Kamar Tersedia
+
+                BookingCtrl -> BookingCtrl : Hitung period_start_date\n& period_end_date
+
+                BookingCtrl -> TransEntity : Transaction::create(\n  owner_id, tenant_id, room_id,\n  amount, duration_months,\n  period_start/end_date,\n  invoice_number,\n  status='pending_verification',\n  payment_method='bank_transfer',\n  sender_bank, sender_name\n)
+                TransEntity --> BookingCtrl : transaction object
+
+                BookingCtrl -> BookingCtrl : Upload file bukti bayar\nke storage
+
+                BookingCtrl -> ProofEntity : PaymentProof::create(\n  transaction_id, file_path,\n  file_type, uploaded_by,\n  verified_status='pending'\n)
+                ProofEntity --> BookingCtrl : payment proof object
+
+                note right of BookingCtrl
+                    Kamar BELUM diassign ke penyewa.
+                    Assignment hanya terjadi setelah
+                    pembayaran diverifikasi oleh owner.
+                end note
+
+                BookingCtrl -> BookingCtrl : session()->forget('booking')
+                BookingCtrl -> BookingCtrl : session(['completed_transaction_id'])
+
+                BookingCtrl -> NotifEntity : Notification::create(\n  user_id = owner,\n  type = 'payment_received',\n  title = 'Pembayaran Baru',\n  category = 'finance',\n  priority = 'high'\n)
+                NotifEntity --> BookingCtrl : notification object
+
+                BookingCtrl -> BookingCtrl : DB::commit()
+
+                BookingCtrl --> PayView : JSON success response\ndengan redirect URL
+                PayView --> SuccessView : Redirect ke halaman sukses
+                SuccessView --> Tenant : Menampilkan halaman sukses\n"Pembayaran berhasil dikonfirmasi!"
+
+            end
+        end
+    end
+end
+
+@enduml

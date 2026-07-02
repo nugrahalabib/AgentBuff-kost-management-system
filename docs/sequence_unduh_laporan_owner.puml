@@ -1,0 +1,94 @@
+@startuml Sequence_Unduh_Laporan_Owner
+
+title Sequence Diagram - Mengunduh Laporan (Owner)
+
+actor "Owner" as Owner
+boundary "OwnerLaporanView" as View
+control "OwnerReportController" as Controller
+entity "GeneratedReport" as ReportEntity
+participant "ReportService" as Service
+participant "PDF / Excel Library" as Library
+
+== Owner Melihat Daftar Laporan ==
+
+Owner -> View : Mengakses halaman laporan
+View -> Controller : index(Request)
+Controller -> ReportEntity : query laporan milik owner\n(status != 'draft')
+ReportEntity --> Controller : daftar laporan
+Controller --> View : return view('owner.laporan', data)
+View --> Owner : Menampilkan daftar laporan\ndengan tombol unduh PDF / Excel
+
+== Owner Memilih Unduh Laporan ==
+
+alt Unduh sebagai PDF
+    Owner -> View : Klik tombol "Unduh PDF"
+    View -> Controller : downloadPdf(GeneratedReport)
+else Unduh sebagai Excel
+    Owner -> View : Klik tombol "Unduh Excel"
+    View -> Controller : downloadExcel(GeneratedReport)
+end
+
+== Validasi Akses ==
+
+Controller -> Controller : Cek kepemilikan laporan\n(report.owner_id == Auth::id())
+Controller -> Controller : Cek status laporan\n(status != 'draft')
+
+alt Validasi Gagal: Bukan Milik Owner
+    Controller --> View : abort(403) - Forbidden
+    View --> Owner : Menampilkan halaman error 403\n"Akses Ditolak"
+else Validasi Gagal: Laporan Masih Draft
+    Controller --> View : abort(403) - Forbidden
+    View --> Owner : Menampilkan halaman error 403\n"Laporan belum tersedia"
+else Validasi Berhasil
+
+    == Mengambil Data Laporan ==
+
+    Controller -> Controller : getReportData(report)
+
+    alt report_type = 'financial_report'
+        Controller -> Service : generateFinancialReport(owner, data)
+        Service --> Controller : reportData (keuangan)
+    else report_type = 'room_status_report'
+        Controller -> Service : generateRoomStatusReport(owner, data)
+        Service --> Controller : reportData (status kamar)
+    else report_type = 'tenant_report'
+        Controller -> Service : generateTenantReport(owner, data)
+        Service --> Controller : reportData (penyewa)
+    else report_type = 'comprehensive_report'
+        Controller -> Service : generateComprehensiveReport(owner, data)
+        Service --> Controller : reportData (komprehensif)
+    end
+
+    == Generate File & Unduh ==
+
+    alt Format PDF
+        Controller -> Library : Pdf::loadView('owner.laporan-pdf',\nreport, reportData)
+        Library --> Controller : PDF object
+        Controller -> Library : setPaper('a4', 'portrait')
+        Controller -> ReportEntity : update downloaded_at = now()
+        ReportEntity --> Controller : saved
+        Controller --> View : return pdf->download(\n'Laporan_[judul]_[timestamp].pdf')
+        View --> Owner : Browser mengunduh file PDF
+    else Format Excel
+        Controller -> Library : new Spreadsheet()
+        Controller -> Library : Isi header (judul, periode)
+
+        alt report_type = 'financial_report'
+            Controller -> Library : exportFinancialToExcel(sheet, data)
+        else report_type = 'room_status_report'
+            Controller -> Library : exportRoomStatusToExcel(sheet, data)
+        else report_type = 'tenant_report'
+            Controller -> Library : exportTenantToExcel(sheet, data)
+        else report_type = 'comprehensive_report'
+            Controller -> Library : exportComprehensiveToExcel(sheet, data)
+        end
+
+        Controller -> ReportEntity : update downloaded_at = now()
+        ReportEntity --> Controller : saved
+        Controller --> View : return response->stream(\n'Laporan_[judul]_[timestamp].xlsx')
+        View --> Owner : Browser mengunduh file Excel
+    end
+
+end
+
+@enduml

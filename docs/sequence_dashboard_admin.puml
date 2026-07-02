@@ -1,0 +1,61 @@
+@startuml Sequence_Dashboard_Admin
+
+title Sequence Diagram - Melihat Dashboard Admin
+
+actor "Admin" as Admin
+boundary "AdminDashboardView" as View
+control "AdminDashboardController" as Controller
+entity "User" as UserEntity
+entity "Transaction" as TransEntity
+entity "Room" as RoomEntity
+entity "Notification" as NotifEntity
+
+== Mengakses Dashboard ==
+
+Admin -> View : Mengakses halaman dashboard
+View -> Controller : index()
+
+== Mengambil Data Statistik ==
+
+Controller -> UserEntity : query total penyewa aktif\n(role='tenant', has currentRoom)
+UserEntity --> Controller : totalTenants
+
+Controller -> TransEntity : query transaksi\nstatus='pending_verification'
+TransEntity --> Controller : pendingVerifications
+
+Controller -> RoomEntity : query kamar terisi\n(has occupants)
+RoomEntity --> Controller : occupiedRooms
+
+Controller -> RoomEntity : query kamar tersedia\n(no occupants, status != maintenance)
+RoomEntity --> Controller : availableRooms
+
+== Mengambil Data Jatuh Tempo ==
+
+Controller -> TransEntity : query transaksi overdue\n(period_end_date < today,\nstatus='verified_by_owner')
+TransEntity --> Controller : overdueTenants
+
+Controller -> TransEntity : query transaksi segera habis\n(period_end_date within reminder days)
+TransEntity --> Controller : expiringTenants
+
+Controller -> Controller : merge overdueTenants + expiringTenants\nhitung dueSoon count
+
+== Mengambil Notifikasi & Verifikasi Pembayaran ==
+
+Controller -> NotifEntity : query notifikasi terbaru\n(status='unread', limit 3)
+NotifEntity --> Controller : latestNotifications
+
+Controller -> TransEntity : query verifikasi pembayaran\n(status='pending_verification',\nwith tenant & paymentProofs, limit 5)
+TransEntity --> Controller : paymentVerifications
+
+== Menghitung Okupansi ==
+
+Controller -> RoomEntity : count total kamar
+RoomEntity --> Controller : totalRooms
+Controller -> Controller : hitung occupancyRate\n= (occupiedRooms / totalRooms) × 100
+
+== Menampilkan Dashboard ==
+
+Controller --> View : return view('admin.dashboard', data)
+View --> Admin : Menampilkan dashboard:\n- Kartu statistik (penyewa, verifikasi, kamar)\n- Panel jatuh tempo\n- Tabel verifikasi pembayaran\n- Tingkat okupansi\n- Notifikasi terbaru
+
+@enduml

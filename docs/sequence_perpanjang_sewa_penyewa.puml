@@ -1,0 +1,149 @@
+@startuml Sequence_Perpanjang_Sewa_Penyewa
+
+title Sequence Diagram - Perpanjang Sewa Kamar (Penyewa)
+
+actor "Penyewa" as Tenant
+boundary "TenantExtendPaymentView" as View
+control "TenantBookingController" as Controller
+entity "Transaction" as TransEntity
+entity "Room" as RoomEntity
+entity "RoomType" as RoomTypeEntity
+entity "User" as UserEntity
+entity "PaymentProof" as ProofEntity
+entity "Notification" as NotifEntity
+
+== Penyewa Mengakses Halaman Perpanjang Sewa ==
+
+Tenant -> View : Mengakses halaman perpanjang sewa
+View -> Controller : showExtendPayment()
+
+Controller -> TransEntity : Cek transaksi ditolak\n(status = rejected_by_admin\n/ rejected_by_owner)
+
+alt Ada Transaksi yang Ditolak
+    Controller --> View : redirect ke halaman retry payment\ndengan pesan error
+    View --> Tenant : Redirect ke halaman\nupload ulang bukti bayar
+else Tidak Ada Transaksi Ditolak
+
+    Controller -> UserEntity : Ambil kamar aktif penyewa\n(user->activeRoom)
+
+    alt Penyewa Belum Punya Kamar
+        Controller --> View : redirect ke halaman welcome\ndengan pesan error
+        View --> Tenant : Redirect ke halaman utama\n"Belum memiliki kamar"
+    else Penyewa Punya Kamar Aktif
+        Controller -> RoomTypeEntity : load roomType dari kamar
+        RoomTypeEntity --> Controller : data tipe kamar
+
+        Controller -> UserEntity : Ambil data owner\n& business settings
+        UserEntity --> Controller : owner, businessSettings
+
+        Controller --> View : return view('tenant.extend-payment',\nroom, owner, businessSettings)
+        View --> Tenant : Menampilkan halaman perpanjang sewa\n(info kamar saat ini, pilihan durasi,\ninfo bank untuk transfer)
+    end
+end
+
+== Penyewa Memilih Durasi Perpanjangan ==
+
+Tenant -> View : Memilih durasi (1-24 bulan)
+Tenant -> View : Klik "Lanjutkan"
+View -> Controller : storeExtendPayment(Request)
+
+Controller -> Controller : validate(\n  duration: required, integer, min:1, max:24\n)
+
+alt Validasi Gagal
+    Controller --> View : Redirect back with errors
+    View --> Tenant : Menampilkan pesan error validasi
+else Validasi Berhasil
+
+    Controller -> TransEntity : Cek transaksi ditolak
+    alt Ada Transaksi Ditolak
+        Controller --> View : redirect ke retry payment
+        View --> Tenant : Redirect ke upload ulang
+    else Tidak Ada Transaksi Ditolak
+
+        Controller -> UserEntity : Ambil kamar aktif
+        alt Penyewa Belum Punya Kamar
+            Controller --> View : redirect back with error
+            View --> Tenant : "Belum memiliki kamar"
+        else Punya Kamar
+
+            Controller -> RoomTypeEntity : Ambil rent_per_person
+            RoomTypeEntity --> Controller : harga per bulan
+
+            Controller -> Controller : Hitung total\n= harga × durasi
+            Controller -> Controller : generateInvoiceNumber()
+            Controller -> TransEntity : Ambil invoice terakhir\nformat INV-YYMM-XXXXX
+            TransEntity --> Controller : last invoice number
+            Controller -> Controller : Buat nomor invoice baru
+
+            Controller -> Controller : Simpan data ke session\n(extend_booking)
+
+            Controller --> View : redirect ke halaman\nextend-payment
+            View --> Tenant : Menampilkan halaman pembayaran\ndengan ringkasan (durasi, total, invoice)
+
+        end
+    end
+end
+
+== Penyewa Upload Bukti Pembayaran ==
+
+Tenant -> View : Upload bukti transfer\n+ isi nama & bank pengirim
+Tenant -> View : Klik "Konfirmasi Pembayaran"
+View -> Controller : confirmExtendPayment(Request)
+
+Controller -> Controller : validate(\n  payment_proof: required, image,\n  sender_bank: required,\n  sender_name: required\n)
+
+alt Validasi Gagal
+    Controller --> View : JSON error response
+    View --> Tenant : Menampilkan pesan error
+else Validasi Berhasil
+
+    Controller -> TransEntity : Cek transaksi ditolak
+    alt Ada Transaksi Ditolak
+        Controller --> View : JSON error 400
+        View --> Tenant : "Selesaikan pembayaran\nyang ditolak terlebih dahulu"
+    else Tidak Ada Transaksi Ditolak
+
+        Controller -> Controller : Ambil data dari session\n(extend_booking)
+
+        alt Session Tidak Ditemukan
+            Controller --> View : JSON error 400
+            View --> Tenant : "Sesi perpanjangan\ntidak ditemukan"
+        else Session Ditemukan
+
+            Controller -> Controller : DB::beginTransaction()
+
+            Controller -> RoomEntity : Ambil data kamar\n(Room::find)
+            RoomEntity --> Controller : currentRoom
+
+            Controller -> Controller : Hitung period_start_date\n= lease_end_date kamar saat ini\nperiod_end_date\n= start + durasi bulan
+
+            Controller -> TransEntity : Transaction::create(\n  owner_id, tenant_id, room_id,\n  amount, duration_months,\n  period_start/end_date,\n  invoice_number,\n  status='pending_verification'\n)
+            TransEntity --> Controller : transaction object
+
+            Controller -> Controller : Upload file bukti bayar\nke storage
+
+            Controller -> ProofEntity : PaymentProof::create(\n  transaction_id, file_path,\n  file_type, uploaded_by,\n  verified_status='pending'\n)
+            ProofEntity --> Controller : payment proof object
+
+            Controller -> Controller : session()->forget('extend_booking')
+            Controller -> Controller : session(['completed_transaction_id'])
+
+            Controller -> NotifEntity : Notification::create(\n  user_id = owner,\n  type = 'payment_received',\n  title = 'Perpanjangan Sewa',\n  category = 'finance',\n  priority = 'high'\n)
+            NotifEntity --> Controller : notification object
+
+            Controller -> Controller : DB::commit()
+
+            Controller --> View : JSON success response\ndengan redirect URL
+            View --> Tenant : Redirect ke halaman\nsukses pembayaran
+
+            alt Terjadi Exception
+                Controller -> Controller : DB::rollBack()
+                Controller --> View : JSON error 500
+                View --> Tenant : "Terjadi kesalahan"
+            end
+
+        end
+    end
+end
+
+@enduml
