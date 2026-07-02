@@ -1,0 +1,32 @@
+# Dependency & build output — dibangun ulang di dalam image
+/vendor
+/node_modules
+/public/build
+/public/hot
+/public/storage
+
+# Runtime & cache
+/bootstrap/cache/*.php
+/storage/logs/*.log
+/database/database.sqlite
+
+# VCS & meta
+/.git
+/.gitignore
+/.github
+
+# File Docker sendiri (tidak perlu ikut ke dalam image)
+/Dockerfile
+/docker-compose.yml
+/.dockerignore
+
+# Tidak dibutuhkan saat runtime
+/tests
+/docs
+/README.md
+/phpunit.xml
+
+# OS / editor
+.DS_Store
+*.swp
+*.swo

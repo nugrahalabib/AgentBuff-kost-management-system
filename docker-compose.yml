@@ -1,0 +1,68 @@
+# AgentBuff KostCloud — menjalankan aplikasi + MySQL via Docker.
+# Jalankan:  docker compose up -d --build
+# Buka:      http://localhost:8000
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agentbuff-kostcloud
+    container_name: kostcloud-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"          # ubah ke "true" saat butuh detail error
+      APP_URL: http://localhost:8000
+      # DB diarahkan ke service "db" (bukan 127.0.0.1). Nilai ini menimpa .env.
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: kostcloud
+      DB_USERNAME: kostcloud
+      DB_PASSWORD: secret
+      # Proyek ini tidak punya migrasi tabel "sessions", jadi pakai file-based
+      # session (disimpan di storage/framework/sessions, ikut volume storage).
+      # cache & queue tetap database karena tabel "cache" & "jobs" tersedia.
+      SESSION_DRIVER: file
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Persist upload (bukti bayar dsb.) & log lintas rebuild container
+      - storage-data:/var/www/html/storage
+    networks:
+      - kostcloud
+
+  db:
+    image: mysql:8.0
+    container_name: kostcloud-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: kostcloud
+      MYSQL_USER: kostcloud
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: rootsecret
+    ports:
+      - "3307:3306"               # akses MySQL dari host di localhost:3307 (opsional)
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - kostcloud
+
+volumes:
+  db-data:
+  storage-data:
+
+networks:
+  kostcloud:
+    driver: bridge
