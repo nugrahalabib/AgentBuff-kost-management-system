@@ -22,27 +22,39 @@ class ListKamarTool extends Tool
             return Response::error('Token tidak terkait pengelola kos.');
         }
 
-        $query = Kamar::where('owner_id', $ownerId)->with('roomType')->orderBy('room_number');
+        $query = Kamar::where('owner_id', $ownerId)
+            ->with('roomType')
+            ->withCount('occupants')
+            ->orderBy('room_number');
 
+        // Occupancy is defined by Kamar::scopeOccupied()/scopeVacant() (pivot OR
+        // legacy current_tenant_id), consistent with User::getActiveRoomAttribute().
+        // The raw `status` column is not a reliable source — it can drift out of sync.
         $status = $request->get('status');
         if (in_array($status, ['available', 'occupied', 'maintenance'], true)) {
             if ($status === 'occupied') {
-                $query->has('occupants');
+                $query->occupied();
             } elseif ($status === 'available') {
-                $query->doesntHave('occupants')->where('status', '!=', 'maintenance');
+                $query->where('status', '!=', 'maintenance')->vacant();
             } else {
                 $query->where('status', 'maintenance');
             }
         }
 
-        $rooms = $query->get()->map(fn ($k) => [
-            'id' => $k->id,
-            'nomor_kamar' => $k->room_number,
-            'lantai' => $k->floor_number,
-            'tipe' => $k->roomType->name ?? null,
-            'harga_per_bulan' => (float) $k->price_per_month,
-            'status' => $k->occupants()->exists() ? 'occupied' : $k->status,
-        ]);
+        $rooms = $query->get()->map(function ($k) {
+            $isOccupied = $k->occupants_count > 0 || $k->current_tenant_id !== null;
+
+            return [
+                'id' => $k->id,
+                'nomor_kamar' => $k->room_number,
+                'lantai' => $k->floor_number,
+                'tipe' => $k->roomType->name ?? null,
+                'harga_per_bulan' => (float) $k->price_per_month,
+                'status' => $isOccupied
+                    ? 'occupied'
+                    : ($k->status === 'maintenance' ? 'maintenance' : 'available'),
+            ];
+        });
 
         return Response::json(['jumlah' => $rooms->count(), 'kamar' => $rooms]);
     }

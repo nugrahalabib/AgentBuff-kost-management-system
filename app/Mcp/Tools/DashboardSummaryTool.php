@@ -24,10 +24,14 @@ class DashboardSummaryTool extends Tool
             return Response::error('Token tidak terkait pengelola kos.');
         }
 
+        // Occupancy uses Kamar::scopeOccupied()/scopeVacant() (pivot OR legacy
+        // current_tenant_id) so these counts agree with list-kamar and the rest of
+        // the app. Occupied takes precedence over maintenance, so the three counts
+        // form a clean partition that sums to the total.
         $totalRooms = Kamar::where('owner_id', $ownerId)->count();
-        $occupied = Kamar::where('owner_id', $ownerId)->has('occupants')->count();
-        $maintenance = Kamar::where('owner_id', $ownerId)->where('status', 'maintenance')->count();
-        $available = Kamar::where('owner_id', $ownerId)->doesntHave('occupants')->where('status', '!=', 'maintenance')->count();
+        $occupied = Kamar::where('owner_id', $ownerId)->occupied()->count();
+        $maintenance = Kamar::where('owner_id', $ownerId)->where('status', 'maintenance')->vacant()->count();
+        $available = Kamar::where('owner_id', $ownerId)->where('status', '!=', 'maintenance')->vacant()->count();
 
         $tenants = User::where('role', 'tenant')
             ->whereHas('tenantProfile', fn ($q) => $q->where('owner_id', $ownerId))

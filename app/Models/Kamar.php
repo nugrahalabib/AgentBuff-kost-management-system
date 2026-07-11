@@ -122,6 +122,29 @@ class Kamar extends Model
     }
 
     /**
+     * Scope: rooms that are occupied.
+     *
+     * A room counts as occupied when it has an active occupant in the
+     * riwayat_penghuni_kamar pivot OR the legacy current_tenant_id is set.
+     * This mirrors User::getActiveRoomAttribute() so every surface (MCP tools,
+     * dashboard, reports) agrees on what "occupied" means. Do NOT rely on the
+     * `status` column alone — it can drift out of sync with real occupancy.
+     */
+    public function scopeOccupied($query)
+    {
+        return $query->where(fn ($q) => $q->has('occupants')->orWhereNotNull('current_tenant_id'));
+    }
+
+    /**
+     * Scope: rooms that are vacant (no active occupant and no legacy tenant).
+     * Exact negation of scopeOccupied().
+     */
+    public function scopeVacant($query)
+    {
+        return $query->doesntHave('occupants')->whereNull('current_tenant_id');
+    }
+
+    /**
      * Scope to get rooms with available slots
      * Uses subquery to count actual active occupants from pivot table for accuracy
      */

@@ -76,6 +76,11 @@ class ReportService
             ->orderBy('room_number')
             ->get();
 
+        // Normalise each room's status to reflect real occupancy (pivot OR
+        // legacy current_tenant_id) so the counts below agree with the MCP
+        // tools and the dashboard instead of trusting the raw `status` column.
+        $rooms->each(fn ($room) => $this->normaliseRoomStatus($room));
+
         $occupied = $rooms->where('status', 'occupied')->count();
         $available = $rooms->where('status', 'available')->count();
         $maintenance = $rooms->where('status', 'maintenance')->count();
@@ -307,11 +312,12 @@ class ReportService
         $due = $tenants->filter(fn($t) => $t->payment_status_label === 'Segera Habis')->count();
 
         // Room Stats
-        $rooms = Kamar::query();
+        $rooms = Kamar::withCount('occupants');
         if ($owner) {
             $rooms->where('owner_id', $owner->id);
         }
         $rooms = $rooms->get();
+        $rooms->each(fn ($room) => $this->normaliseRoomStatus($room));
 
         $occupiedRooms = $rooms->where('status', 'occupied')->count();
         $availableRooms = $rooms->where('status', 'available')->count();
@@ -333,5 +339,21 @@ class ReportService
                 'due' => $due
             ]
         ];
+    }
+
+    /**
+     * Normalise a room's in-memory `status` to reflect real occupancy
+     * (active pivot occupant OR legacy current_tenant_id), consistent with
+     * Kamar::scopeOccupied() and the MCP tools. In-memory only; not persisted.
+     */
+    private function normaliseRoomStatus($room): void
+    {
+        $isOccupied = ($room->relationLoaded('occupants') && $room->occupants->isNotEmpty())
+            || (($room->occupants_count ?? 0) > 0)
+            || $room->current_tenant_id !== null;
+
+        $room->status = $isOccupied
+            ? 'occupied'
+            : ($room->status === 'maintenance' ? 'maintenance' : 'available');
     }
 }
