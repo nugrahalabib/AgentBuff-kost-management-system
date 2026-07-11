@@ -50,10 +50,8 @@ class LogAdminActivity
         if ($path === 'admin/dashboard') return 'Dashboard';
         if (str_contains($path, 'admin/kamar')) return 'Data Kamar';
         if (str_contains($path, 'admin/penyewa')) return 'Data Penyewa';
-        if (str_contains($path, 'admin/akun-penyewa')) return 'Akun Penyewa';
         if (str_contains($path, 'admin/transaksi')) return 'Data Transaksi';
         if (str_contains($path, 'admin/laporan')) return 'Laporan';
-        if (str_contains($path, 'admin/konten')) return 'Kelola Konten';
         if (str_contains($path, 'admin/notifikasi')) return 'Notifikasi';
         
         return null; // Don't log unknown or minor pages to avoid noise

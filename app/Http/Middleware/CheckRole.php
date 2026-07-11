@@ -20,11 +20,19 @@ class CheckRole
             return redirect()->route('login');
         }
 
+        // Akun yang dinonaktifkan (mis. admin dinonaktifkan oleh owner) tidak boleh
+        // mengakses panel — logout aman lalu kembali ke login.
+        if ($request->user()->status === 'inactive') {
+            auth()->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')
+                ->with('status', 'Akun Anda telah dinonaktifkan. Hubungi pemilik kos.');
+        }
+
         // Check if user has the required role
         if ($request->user()->role !== $role) {
-            // Redirect to their appropriate dashboard with error message
-            $userRole = $request->user()->role;
-            
             abort(403, 'Unauthorized access. You do not have permission to access this page.');
         }
 

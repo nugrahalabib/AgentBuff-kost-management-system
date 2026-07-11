@@ -8,10 +8,15 @@
             </h2>
             <p class="text-sm text-gray-500">Cek mutasi bank dan konfirmasi pembayaran dari penyewa.</p>
         </div>
+        <button type="button" onclick="openModal('transaksiModal')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-3 px-6 rounded-xl shadow-md transition flex items-center whitespace-nowrap">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            TAMBAH TRANSAKSI
+        </button>
     </div>
 @endsection
 
 @section('content')
+    @include('partials.modal-transaksi', ['tenants' => $tenants, 'rooms' => $rooms])
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         
@@ -514,3 +519,15 @@
         </div>
     </div>
 @endsection
+
+@push('tour')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    window.__pageTour = [
+        { element: 'a[href$="/owner/transaksi/tambah"]', popover: { title: 'Tambah Transaksi', description: 'Catat pembayaran manual (tunai/transfer) & tempatkan penyewa ke kamar.' } },
+        { popover: { title: 'Verifikasi', description: 'Cek bukti transfer penyewa lalu terima/tolak di daftar transaksi ini.' } },
+    ];
+    window.KostTour && window.KostTour.auto('owner-transaksi-v1', window.__pageTour);
+});
+</script>
+@endpush

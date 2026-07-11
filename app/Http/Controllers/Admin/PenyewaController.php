@@ -9,29 +9,51 @@ use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Concerns\ManagesTenants;
 
 class PenyewaController extends Controller
 {
+    use ManagesTenants;
+
+    /** Form tambah penyewa baru (admin). */
+    public function create()
+    {
+        return view('admin.penyewa-create', [
+            'rooms' => $this->availableRoomsForOwner(),
+        ]);
+    }
+
+    /** Simpan penyewa baru + opsional tempatkan ke kamar (admin). */
+    public function store(Request $request)
+    {
+        $this->persistNewTenant($request);
+
+        return redirect()->route('admin.penyewa')->with('success', 'Penyewa baru berhasil ditambahkan.');
+    }
+
     /**
      * Display list of tenants
      */
     public function index(Request $request)
     {
+        $ownerId = auth()->user()->ownerId();
+
         $search = $request->get('search', null);
         $floor = $request->get('floor', null);
         $paymentStatus = $request->get('status', null);
         $activeStatus = $request->get('active', null); // aktif, tidak_aktif
 
         // Get owner's reminder setting for "mau habis" calculation
-        $owner = User::where('role', 'owner')->first();
+        $owner = auth()->user()->resolveOwner();
         $businessSetting = $owner ? \App\Models\PemilikKos::where('owner_id', $owner->id)->first() : null;
         $reminderDays = $businessSetting->invoice_reminder_days_before ?? 7;
 
         // Get all available floors for filter dropdown
-        $availableFloors = \App\Models\Kamar::distinct()->pluck('floor_number')->sort()->values();
+        $availableFloors = \App\Models\Kamar::where('owner_id', $ownerId)->distinct()->pluck('floor_number')->sort()->values();
 
         // Show ALL tenants - use pure Eloquent to avoid GROUP BY/DISTINCT issues
         $query = User::where('role', 'tenant')
+            ->whereHas('tenantProfile', fn($q) => $q->where('owner_id', $ownerId))
             ->with(['tenantProfile', 'tenantTransactions', 'currentRoom.roomType', 'occupiedRoom.roomType']);
 
         // Filter by active status (has room or not) - check BOTH relationships
@@ -137,6 +159,7 @@ class PenyewaController extends Controller
 
         // Total Penghuni (active tenants with rooms assigned)
         $totalTenants = User::where('role', 'tenant')
+            ->whereHas('tenantProfile', fn($q) => $q->where('owner_id', $ownerId))
             ->where(function ($q) {
                 $q->whereHas('currentRoom')->orWhereHas('occupiedRoom');
             })
@@ -144,6 +167,7 @@ class PenyewaController extends Controller
 
         // Penghuni Baru (joined in the last 30 days)
         $newTenants = User::where('role', 'tenant')
+            ->whereHas('tenantProfile', fn($q) => $q->where('owner_id', $ownerId))
             ->where(function ($q) {
                 $q->whereHas('currentRoom')->orWhereHas('occupiedRoom');
             })
@@ -151,13 +175,14 @@ class PenyewaController extends Controller
             ->count();
 
         // Get owner's reminder setting (H-? before contract ends)
-        $owner = User::where('role', 'owner')->first();
+        $owner = auth()->user()->resolveOwner();
         $businessSetting = $owner ? \App\Models\PemilikKos::where('owner_id', $owner->id)->first() : null;
         $reminderDays = $businessSetting->invoice_reminder_days_before ?? 7; // Default H-7 if not set
 
         // Kontrak Habis (tenants whose lease expires within H-? days based on owner setting)
         // Shows tenants who need to renew soon (within reminder period)
-        $expiringContracts = \App\Models\Transaksi::where('status', 'verified_by_owner')
+        $expiringContracts = \App\Models\Transaksi::where('owner_id', $ownerId)
+            ->where('status', 'verified_by_owner')
             ->whereBetween('period_end_date', [
                 now()->startOfDay(),
                 now()->addDays($reminderDays)->endOfDay()
@@ -167,7 +192,8 @@ class PenyewaController extends Controller
 
         // Nunggak (tenants whose lease already EXPIRED - period_end_date < today)
         // Only count tenants who still have an active room
-        $delinquent = \App\Models\Transaksi::where('status', 'verified_by_owner')
+        $delinquent = \App\Models\Transaksi::where('owner_id', $ownerId)
+            ->where('status', 'verified_by_owner')
             ->where('period_end_date', '<', now()->startOfDay())
             ->whereNotExists(function ($query) {
                 $query->select(DB::raw(1))
@@ -218,28 +244,12 @@ class PenyewaController extends Controller
             abort(404);
         }
 
+        abort_unless($user->tenantProfile && $user->tenantProfile->owner_id === auth()->user()->ownerId(), 404);
+
         $user->load(['tenantProfile', 'currentRoom.roomType', 'occupiedRoom.roomType', 'tenantTransactions']);
 
         return view('admin.biodata-penyewa', [
             'penyewa' => $user,
-        ]);
-    }
-
-    /**
-     * List unverified tenant accounts
-     */
-    public function unverified()
-    {
-        $unverifiedTenants = User::where('role', 'tenant')
-            ->whereHas('tenantProfile', function ($q) {
-                $q->where('is_verified_by_admin', false);
-            })
-            ->with('tenantProfile')
-            ->paginate(12);
-
-        return view('admin.akun-penyewa', [
-            'dataPenyewa' => $unverifiedTenants,
-            'tab' => 'unverified',
         ]);
     }
 
@@ -365,7 +375,7 @@ class PenyewaController extends Controller
         }
 
         // Log activity
-        $owner = User::where('role', 'owner')->first();
+        $owner = auth()->user()->resolveOwner();
         AdminActivityLog::create([
             'admin_id' => Auth::id(),
             'owner_id' => $owner?->id,

@@ -342,3 +342,19 @@
     </div>
 
 @endsection
+@push('tour')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    window.__pageTour = [
+        { popover: { title: 'Selamat datang, Admin! 👋', description: 'Panduan singkat mengenal panel admin kos. Klik “Lanjut”.' } },
+        { element: 'a[href$="/admin/dashboard"]', popover: { title: 'Dashboard', description: 'Ringkasan statistik kos yang Anda kelola.' } },
+        { element: 'a[href$="/admin/kamar"]', popover: { title: 'Data Kamar', description: 'Tambah, ubah status, dan hapus kamar.' } },
+        { element: 'a[href$="/admin/penyewa"]', popover: { title: 'Data Penyewa', description: 'Catat penyewa baru & tempatkan ke kamar tersedia.' } },
+        { element: 'a[href$="/admin/transaksi"]', popover: { title: 'Data Transaksi', description: 'Input pembayaran manual & verifikasi pembayaran penyewa.' } },
+        { element: 'a[href$="/admin/laporan"]', popover: { title: 'Laporan', description: 'Buat laporan keuangan, kamar, dan penyewa (PDF & Excel).' } },
+        { popover: { title: 'Siap! 🎉', description: 'Semua perubahan Anda tersinkron dengan pemilik kos. Tombol “Panduan” di kanan bawah memutar ulang tur ini.' } },
+    ];
+    window.KostTour && window.KostTour.auto('admin-dashboard-v1', window.__pageTour);
+});
+</script>
+@endpush

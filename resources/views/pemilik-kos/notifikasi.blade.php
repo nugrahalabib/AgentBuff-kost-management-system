@@ -19,7 +19,7 @@
     <div class="space-y-6">
             
         {{-- Filter Categories --}}
-        <div class="flex flex-wrap gap-2 pb-2">
+        <div id="notif-filters" class="flex flex-wrap gap-2 pb-2">
             <a href="{{ route('owner.notifikasi') }}" class="{{ !request('category') || request('category') == 'semua' ? 'bg-emerald-900 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200' }} px-5 py-2 rounded-full text-sm font-bold transition">
                 Semua
             </a>
@@ -146,3 +146,15 @@
         </div>
     </div>
 @endsection
+@push('tour')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    window.__pageTour = [
+        { popover: { title: 'Pusat Notifikasi 🔔', description: 'Semua pemberitahuan penting kos Anda ada di sini.' } },
+        { element: '#notif-filters', popover: { title: 'Saring Kategori', description: 'Filter: Semua, Urgent & Approval (butuh tindakan), Keuangan, dan Info Sistem.' } },
+        { popover: { title: 'Tindakan', description: 'Notifikasi “Urgent & Approval” biasanya butuh persetujuan Anda, mis. verifikasi pembayaran penyewa.' } },
+    ];
+    window.KostTour && window.KostTour.auto('owner-notifikasi-v1', window.__pageTour);
+});
+</script>
+@endpush

@@ -7,6 +7,7 @@ use App\Models\Kamar;
 use App\Models\TipeKamar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class KamarController extends Controller
 {
@@ -157,5 +158,123 @@ class KamarController extends Controller
             'tipeKamar' => $roomTypes,
             'reminderDays' => $reminderDays,
         ]);
+    }
+
+    /**
+     * Tampilkan form tambah kamar (owner).
+     */
+    public function create()
+    {
+        $roomTypes = TipeKamar::where('owner_id', Auth::id())
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
+
+        return view('pemilik-kos.kamar-create', [
+            'tipeKamar' => $roomTypes,
+        ]);
+    }
+
+    /**
+     * Simpan kamar baru milik owner.
+     */
+    public function store(Request $request)
+    {
+        $ownerId = Auth::id();
+
+        $validated = $request->validate([
+            'room_number' => ['required', 'integer', 'min:1', Rule::unique('kamar', 'room_number')->where('owner_id', $ownerId)],
+            'floor_number' => 'required|numeric|min:1|max:4',
+            'tipe_kamar_id' => ['required', Rule::exists('tipe_kamar', 'id')->where('owner_id', $ownerId)],
+            'price_per_month' => 'required|numeric|min:0',
+            'status' => 'required|in:available,maintenance',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $room = Kamar::create([
+            'owner_id' => $ownerId,
+            'tipe_kamar_id' => $validated['tipe_kamar_id'],
+            'room_number' => $validated['room_number'],
+            'floor_number' => (int) $validated['floor_number'],
+            'status' => $validated['status'],
+            'price_per_month' => $validated['price_per_month'],
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        \App\Services\LoggerService::log('create', "Tambah kamar {$validated['room_number']}", $room);
+
+        return redirect()->route('owner.kamar')
+            ->with('success', 'Kamar ' . $validated['room_number'] . ' berhasil ditambahkan!');
+    }
+
+    /**
+     * Ubah status kamar milik owner.
+     */
+    public function updateStatus(Request $request, Kamar $room)
+    {
+        abort_unless((int) $room->owner_id === (int) Auth::id(), 403);
+
+        $validated = $request->validate([
+            'status' => 'required|in:available,occupied,maintenance',
+        ]);
+
+        $oldStatus = $room->status;
+        $room->update(['status' => $validated['status']]);
+
+        \App\Services\LoggerService::log('update_status', 'Update Status Kamar', $room, ['status' => $oldStatus], ['status' => $validated['status']]);
+
+        if ($validated['status'] === 'maintenance' && $oldStatus !== 'maintenance') {
+            \App\Models\Notification::create([
+                'user_id' => $room->owner_id,
+                'type' => 'room_maintenance',
+                'category' => 'system',
+                'title' => 'Kamar Perlu Perbaikan',
+                'message' => "Kamar {$room->room_number} ditandai Maintenance.",
+                'related_entity_type' => 'room',
+                'related_entity_id' => $room->id,
+                'priority' => 'high',
+                'action_required' => false,
+            ]);
+        } elseif ($validated['status'] === 'available' && $oldStatus === 'maintenance') {
+            \App\Models\Notification::create([
+                'user_id' => $room->owner_id,
+                'type' => 'info',
+                'category' => 'system',
+                'title' => 'Perbaikan Selesai',
+                'message' => "Kamar {$room->room_number} selesai diperbaiki dan siap dihuni.",
+                'related_entity_type' => 'room',
+                'related_entity_id' => $room->id,
+                'priority' => 'medium',
+                'action_required' => false,
+            ]);
+        }
+
+        return back()->with('success', 'Status kamar berhasil diubah');
+    }
+
+    /**
+     * Hapus kamar milik owner.
+     */
+    public function destroy(Request $request, Kamar $room)
+    {
+        abort_unless((int) $room->owner_id === (int) Auth::id(), 403);
+
+        if ($room->status === 'occupied' && $room->occupants()->exists()) {
+            return back()->withErrors(['error' => 'Tidak dapat menghapus kamar yang sedang ditempati. Kosongkan penghuni dulu.']);
+        }
+
+        $roomNumber = $room->room_number;
+
+        \App\Services\LoggerService::log('delete', "Hapus kamar {$roomNumber}", $room);
+
+        \App\Models\Transaksi::where('kamar_id', $room->id)->update(['kamar_id' => null]);
+        $room->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['status' => 'success', 'message' => 'Kamar ' . $roomNumber . ' berhasil dihapus!']);
+        }
+
+        return redirect()->route('owner.kamar')
+            ->with('success', 'Kamar ' . $roomNumber . ' berhasil dihapus!');
     }
 }

@@ -13,15 +13,15 @@
                         </path>
                     </svg>
                 </div>
-                <h2 class="text-4xl font-bold mb-4">Gabung Bersama Kami</h2>
-                <p class="text-emerald-100 text-lg">Buat akun untuk melakukan pemesanan kamar dan pengelolaan profil</p>
+                <h2 class="text-4xl font-bold mb-4">Kelola Kos Anda</h2>
+                <p class="text-emerald-100 text-lg">Buat akun pemilik kos dan mulai kelola kamar, penyewa, & keuangan dalam satu dashboard cloud.</p>
             </div>
         </div>
 
         <div class="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-16">
             <div class="w-full max-w-md space-y-8">
                 <div class="text-center lg:text-left">
-                    <h1 class="text-3xl font-bold text-gray-900">Buat Akun Baru</h1>
+                    <h1 class="text-3xl font-bold text-gray-900">Daftar Pemilik Kos</h1>
                     <p class="text-gray-500 mt-2">Sudah punya akun? <a href="{{ route('login') }}"
                             class="text-emerald-600 font-bold hover:underline">Masuk di sini</a></p>
                 </div>
@@ -35,6 +35,14 @@
                             class="block w-full px-4 py-3 mt-1 border-gray-300 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                             type="text" name="name" :value="old('name')" required autofocus placeholder="Nama Anda" />
                         <x-input-error :messages="$errors->get('name')" class="mt-2" />
+                    </div>
+
+                    <div>
+                        <label for="boarding_house_name" class="block text-sm font-medium text-gray-700">Nama Kos <span class="text-gray-400">(opsional)</span></label>
+                        <input id="boarding_house_name"
+                            class="block w-full px-4 py-3 mt-1 border-gray-300 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                            type="text" name="boarding_house_name" :value="old('boarding_house_name')" placeholder="Contoh: Kos Mawar Indah" />
+                        <x-input-error :messages="$errors->get('boarding_house_name')" class="mt-2" />
                     </div>
 
                     <div>

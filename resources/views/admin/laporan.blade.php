@@ -477,3 +477,13 @@
     </script>
 
 @endsection
+@push('tour')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    window.__pageTour = [
+        { element: 'a[href$="/admin/laporan/create"]', popover: { title: 'Buat Laporan', description: 'Hasilkan laporan keuangan, status kamar, atau data penyewa (PDF & Excel).' } },
+    ];
+    window.KostTour && window.KostTour.auto('admin-laporan-v1', window.__pageTour);
+});
+</script>
+@endpush

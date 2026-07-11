@@ -32,11 +32,13 @@ class LaporanController extends Controller
      */
     public function index(Request $request)
     {
+        $ownerId = auth()->user()->ownerId();
+
         $status     = $request->get('status', null);
         $search     = $request->get('search', null);
         $reportType = $request->get('report_type', null);
 
-        $query = Laporan::with(['owner', 'admin']);
+        $query = Laporan::with(['owner', 'admin'])->where('owner_id', $ownerId);
 
         if ($status && $status !== 'semua') {
             if ($status === 'sent') {
@@ -56,11 +58,12 @@ class LaporanController extends Controller
 
         $reports = $query->orderBy('created_at', 'desc')->paginate(10);
 
-        $monthlyReports = Laporan::whereMonth('created_at', today()->month)
+        $monthlyReports = Laporan::where('owner_id', $ownerId)
+            ->whereMonth('created_at', today()->month)
             ->whereYear('created_at', today()->year)
             ->count();
-        $pendingReports = Laporan::where('status', 'draft')->count();
-        $totalArchived = Laporan::whereIn('status', ['sent', 'viewed'])->count();
+        $pendingReports = Laporan::where('owner_id', $ownerId)->where('status', 'draft')->count();
+        $totalArchived = Laporan::where('owner_id', $ownerId)->whereIn('status', ['sent', 'viewed'])->count();
 
         return view('admin.laporan', [
             'reports'   => $reports,
@@ -126,42 +129,40 @@ class LaporanController extends Controller
         ];
 
         $admin = Auth::user();
-        $owners = \App\Models\User::where('role', 'owner')->get();
+        $owner = auth()->user()->resolveOwner();
 
-        foreach ($owners as $owner) {
-            $reportData = match ($validated['report_type']) {
-                'financial_report' => $this->reportService->generateFinancialReport($owner, $data),
-                'room_status_report' => $this->reportService->generateRoomStatusReport($owner, $data),
-                'tenant_report' => $this->reportService->generateTenantReport($owner, $data),
-                'comprehensive_report' => $this->reportService->generateComprehensiveReport($owner, $data),
-                default => [],
-            };
+        $reportData = match ($validated['report_type']) {
+            'financial_report' => $this->reportService->generateFinancialReport($owner, $data),
+            'room_status_report' => $this->reportService->generateRoomStatusReport($owner, $data),
+            'tenant_report' => $this->reportService->generateTenantReport($owner, $data),
+            'comprehensive_report' => $this->reportService->generateComprehensiveReport($owner, $data),
+            default => [],
+        };
 
-            $report = Laporan::create([
-                'owner_id' => $owner->id,
-                'admin_id' => $admin->id,
-                'report_type' => $validated['report_type'],
-                'report_month' => $startMonth,
-                'report_year' => $startYear,
-                'end_month' => $endMonth,
-                'end_year' => $endYear,
-                'title' => $this->getReportTitle($validated['report_type'], $startMonth, $startYear, $endMonth, $endYear),
-                'status' => 'draft',
-                'generated_at' => now(),
-            ]);
+        $report = Laporan::create([
+            'owner_id' => $owner->id,
+            'admin_id' => $admin->id,
+            'report_type' => $validated['report_type'],
+            'report_month' => $startMonth,
+            'report_year' => $startYear,
+            'end_month' => $endMonth,
+            'end_year' => $endYear,
+            'title' => $this->getReportTitle($validated['report_type'], $startMonth, $startYear, $endMonth, $endYear),
+            'status' => 'draft',
+            'generated_at' => now(),
+        ]);
 
-            try {
-                $this->generateReportFiles($report, $reportData, $validated['report_type']);
-            } catch (\Exception $e) {
-                Log::error('Report file generation failed: ' . $e->getMessage());
-            }
-
-            \App\Services\LoggerService::log(
-                'create',
-                'Membuat laporan ' . $validated['report_type'],
-                $report
-            );
+        try {
+            $this->generateReportFiles($report, $reportData, $validated['report_type']);
+        } catch (\Exception $e) {
+            Log::error('Report file generation failed: ' . $e->getMessage());
         }
+
+        \App\Services\LoggerService::log(
+            'create',
+            'Membuat laporan ' . $validated['report_type'],
+            $report
+        );
 
         return back()->with('success', 'Laporan berhasil dibuat! Silakan cek daftar di bawah.');
     }

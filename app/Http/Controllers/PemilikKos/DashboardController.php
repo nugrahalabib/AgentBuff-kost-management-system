@@ -125,6 +125,7 @@ class DashboardController extends Controller
 
         // 4. ACTIVITY LOGS (Admin Activity)
         $logs = \App\Models\AdminActivityLog::with('admin')
+            ->where('owner_id', $owner->id)
             ->latest()
             ->limit(5)
             ->get();
@@ -153,7 +154,19 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
+        // Onboarding: status langkah awal setup kos (berbasis data nyata, bukan localStorage).
+        $setup = [
+            'tipe_kamar' => \App\Models\TipeKamar::where('owner_id', $owner->id)->exists(),
+            'kamar'      => Kamar::where('owner_id', $owner->id)->exists(),
+            'penyewa'    => \App\Models\Penyewa::where('owner_id', $owner->id)->exists(),
+            'transaksi'  => Transaksi::where('owner_id', $owner->id)->exists(),
+        ];
+        // Dianggap selesai bila 3 langkah inti (tipe kamar, kamar, penyewa) sudah ada.
+        $setupComplete = $setup['tipe_kamar'] && $setup['kamar'] && $setup['penyewa'];
+
         return view('pemilik-kos.dashboard', [
+            'setup' => $setup,
+            'setupComplete' => $setupComplete,
             'totalIncome' => $totalIncome,
             'pendingIncome' => $pendingIncome,
             'incomeGrowthPercent' => $incomeGrowthPercent,

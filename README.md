@@ -1,170 +1,77 @@
-# KosMutiara27 — Sistem Manajemen Rumah Kos
+# AgentBuff KostCloud
 
-Aplikasi web berbasis Laravel untuk pengelolaan rumah kos secara digital. Dibangun sebagai proyek tugas akhir dengan fitur multi-peran, manajemen kamar, transaksi, laporan, dan asisten AI.
+Aplikasi web **manajemen kos internal berbasis subscription (SaaS multi-tenant)** yang bisa
+dikendalikan oleh **AI agent melalui MCP** (Model Context Protocol). Setiap pemilik kos punya
+workspace terpisah untuk mengelola kamar, penyewa, transaksi, dan laporan — tanpa reservasi publik.
 
-## Teknologi yang Digunakan
+> Konteks lengkap proyek, keputusan arsitektur, dan log perubahan ada di
+> [AGENTBUFF-KOSTCLOUD.md](AGENTBUFF-KOSTCLOUD.md).
 
-- **Backend**: Laravel 12, PHP 8.2+
-- **Frontend**: Tailwind CSS 3, Alpine.js, Vite
-- **Database**: MySQL
-- **AI**: Google Gemini API
-- **Export**: DomPDF (PDF), PhpSpreadsheet (Excel)
+## Teknologi
 
-## Fitur Utama
+- **Backend:** Laravel 12, PHP 8.3
+- **Frontend:** Tailwind CSS 3, Alpine.js, Vite, driver.js (tur onboarding)
+- **Database:** MySQL 8
+- **Auth:** Laravel Breeze + Laravel Sanctum (bearer token untuk MCP)
+- **AI/MCP:** Laravel MCP (server HTTP `/mcp`)
+- **Export:** DomPDF (PDF), PhpSpreadsheet (Excel)
 
-| Fitur | Admin | Pemilik Kos | Penyewa |
-|-------|-------|-------------|---------|
-| Dashboard & Statistik | ✓ | ✓ | ✓ |
-| Manajemen Kamar | ✓ | ✓ | — |
-| Manajemen Penyewa | ✓ | ✓ | — |
-| Verifikasi Transaksi | ✓ | ✓ | — |
-| Reservasi & Sewa Kamar | — | — | ✓ |
-| Laporan (PDF & Excel) | ✓ | ✓ | — |
-| Asisten AI (Gemini) | — | ✓ | — |
-| Manajemen Konten Website | — | ✓ | — |
-| Notifikasi | ✓ | ✓ | ✓ |
+## Peran
 
-## Prasyarat
+| Peran | Keterangan |
+|-------|-----------|
+| **Pemilik Kos (owner)** | Mendaftar sendiri (subscription). Akses penuh: kamar, penyewa, transaksi, laporan, pengaturan, kelola admin, token MCP. |
+| **Admin** | Opsional — dibuat oleh owner. Akses manajemen setara owner; datanya tersinkron dengan owner. |
+| **Penyewa** | Bukan akun login — hanya **data internal** yang dikelola owner/admin. |
 
-Pastikan perangkat kamu sudah terpasang:
+## Menjalankan dengan Docker
 
-- PHP >= 8.2 (dengan ekstensi: `pdo_mysql`, `mbstring`, `xml`, `zip`, `gd`)
-- Composer
-- Node.js >= 18 & npm
-- MySQL >= 8.0
-
-## Instalasi
-
-### 1. Clone Repository
+Prasyarat: Docker Desktop.
 
 ```bash
-git clone https://github.com/adzkiyaqarina/kost-management-system-KosMutiara27.git
-cd kost-management-system-KosMutiara27
+docker compose up -d --build
 ```
 
-### 2. Install Dependencies
+Buka **http://localhost:8000**. Container menjalankan migrasi + seeder otomatis.
 
-```bash
-composer install
-npm install
-```
-
-### 3. Konfigurasi Environment
-
-```bash
-cp .env.example .env
-php artisan key:generate
-```
-
-Buka file `.env` dan sesuaikan konfigurasi berikut:
-
-```env
-# Konfigurasi Database
-DB_HOST=127.0.0.1
-DB_PORT=3307
-DB_DATABASE=nama_database
-DB_USERNAME=root
-DB_PASSWORD=password_database
-
-# Konfigurasi AI Assistant (lihat panduan di bawah)
-GEMINI_API_KEY=isi_dengan_api_key
-```
-
-### 4. Siapkan Database
-
-Buat database baru di MySQL, lalu jalankan migrasi dan seeder:
-
-```bash
-php artisan migrate --seed
-```
-
-Perintah ini akan membuat semua tabel dan mengisi data awal termasuk akun default.
-
-### 5. Buat Symlink Storage
-
-```bash
-php artisan storage:link
-```
-
-### 6. Build Asset Frontend
-
-```bash
-npm run build
-```
-
-### 7. Jalankan Aplikasi
-
-```bash
-php artisan serve
-```
-
-Akses aplikasi di: `http://127.0.0.1:8000`
-
----
-
-## Akun Default
-
-Setelah menjalankan seeder, akun berikut tersedia untuk pengujian:
+### Akun default (hasil seeder)
 
 | Peran | Email | Password |
 |-------|-------|----------|
+| Owner | `owner1@kosadmin.local` | `password123` |
 | Admin | `admin@kosadmin.local` | `password123` |
-| Pemilik Kos | `owner1@kosadmin.local` | `password123` |
-| Penyewa | `ahmad@example.com` | `password123` |
 
-> **Catatan**: Ganti password akun-akun ini setelah login pertama kali di lingkungan produksi.
+Atau **daftar owner baru** di `/register` (workspace langsung kosong).
 
----
+Perintah lain: `docker compose logs -f app`, `docker compose stop`, `docker compose down -v` (reset DB).
 
-## Konfigurasi Fitur AI Assistant
+## Integrasi AI Agent (MCP)
 
-Fitur AI Assistant menggunakan Google Gemini API. Ikuti langkah berikut untuk mengaktifkannya:
+1. Login owner/admin → menu **MCP / AI Agent** → **Generate Token**.
+2. Berikan URL + bearer token ke AI agent (Claude Code, Codex, Hermes, OpenClaw, dll):
 
-1. Buka [Google AI Studio](https://aistudio.google.com/)
-2. Login dengan akun Google
-3. Klik **"Get API Key"** → **"Create API Key"**
-4. Salin API key yang dihasilkan
-5. Tempel di file `.env`:
-   ```env
-   GEMINI_API_KEY=your_api_key_here
-   ```
+```json
+{
+  "mcpServers": {
+    "kostcloud": {
+      "type": "http",
+      "url": "http://localhost:8000/mcp",
+      "headers": { "Authorization": "Bearer <TOKEN_ANDA>" }
+    }
+  }
+}
+```
 
-> Google AI Studio menyediakan **tier gratis** yang cukup untuk keperluan pengujian dan pengembangan.
+Tool yang tersedia (semua otomatis di-scope ke kos pemilik token): ringkasan dashboard, daftar/tambah
+kamar, ubah status kamar, daftar tipe kamar, daftar/tambah penyewa (+ tempatkan ke kamar),
+daftar/catat transaksi, dan generate laporan.
 
-Jika `GEMINI_API_KEY` dikosongkan, fitur AI Assistant tidak akan berfungsi namun seluruh fitur lainnya tetap dapat digunakan.
+## Pengembangan lokal (tanpa Docker penuh)
 
----
-
-## Mode Development
-
-Untuk menjalankan semua service sekaligus (server, queue, log, vite HMR):
+Butuh PHP 8.3, Composer, Node 20, dan MySQL. Jalankan server dev menunjuk ke MySQL container:
 
 ```bash
-composer dev
+composer install && npm install && npm run build
+php artisan migrate --seed
+php artisan serve
 ```
-
-Untuk menjalankan pengujian:
-
-```bash
-composer test
-```
-
----
-
-## Struktur Peran Pengguna
-
-```
-Admin
-└── Mengelola seluruh sistem (penyewa, transaksi, laporan global)
-
-Pemilik Kos
-├── Mengelola kamar & tipe kamar
-├── Memverifikasi transaksi pembayaran
-├── Mengunduh laporan keuangan & penghuni
-├── Mengelola konten halaman utama website
-└── Menggunakan AI Assistant untuk analisis data kos
-
-Penyewa
-├── Melakukan reservasi kamar
-├── Upload bukti pembayaran
-└── Melihat riwayat transaksi

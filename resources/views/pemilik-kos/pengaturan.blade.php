@@ -795,3 +795,17 @@
         .toggle-label { width: 100%; height: 100%; background-color: #ccc; }
     </style>
 @endsection
+@push('tour')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    window.__pageTour = [
+        { popover: { title: 'Pengaturan Kos ⚙️', description: 'Halaman ini punya 3 tab. Berikut fungsi masing-masing.' } },
+        { element: '#btn-pricing', popover: { title: 'Tab: Harga & Tipe', description: 'Kelola tipe kamar & harganya. Tombol “Tambah Tipe Baru” untuk menambah tipe.' } },
+        { element: '#btn-rules', popover: { title: 'Tab: Pengaturan', description: 'Atur denda keterlambatan, toleransi hari, dan siklus penagihan/invoice.' } },
+        { element: '#btn-account', popover: { title: 'Tab: Profil Pemilik', description: 'Ubah data diri, ganti password, dan rekening bank untuk menerima pembayaran.' } },
+    ];
+    if (new URLSearchParams(window.location.search).get('add') === '1' && typeof openAddRoomTypeModal === 'function') { openAddRoomTypeModal(); }
+    window.KostTour && window.KostTour.auto('owner-pengaturan-v1', window.__pageTour);
+});
+</script>
+@endpush

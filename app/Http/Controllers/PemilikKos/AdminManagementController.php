@@ -19,7 +19,9 @@ class AdminManagementController extends Controller
     {
         $owner = auth()->user();
 
+        // Hanya admin milik owner ini (multi-tenant).
         $admins = User::where('role', 'admin')
+            ->whereHas('adminProfile', fn ($q) => $q->where('owner_id', $owner->id))
             ->with('adminProfile')
             ->orderBy('status', 'desc') // active first
             ->orderBy('last_login_at', 'desc')

@@ -22,11 +22,12 @@ class KamarController extends Controller
         $search = $request->get('search', null);
 
         // Get owner's reminder setting for "mau habis" calculation
-        $owner = User::where('role', 'owner')->first();
+        $ownerId = auth()->user()->ownerId();
+        $owner = auth()->user()->resolveOwner();
         $businessSetting = $owner ? \App\Models\PemilikKos::where('owner_id', $owner->id)->first() : null;
         $reminderDays = $businessSetting?->invoice_reminder_days_before ?? 7;
 
-        $query = Kamar::with(['roomType', 'occupants.tenantProfile', 'occupants.tenantTransactions']);
+        $query = Kamar::where('owner_id', $ownerId)->with(['roomType', 'occupants.tenantProfile', 'occupants.tenantTransactions']);
 
         // Search by room number or tenant name
         // Normalize search by replacing spaces with % wildcards to handle multiple spaces
@@ -117,14 +118,18 @@ class KamarController extends Controller
 
         // Stats use occupants pivot as source of truth
         $stats = [
-            'total' => Kamar::count(),
-            'available' => Kamar::doesntHave('occupants')->where('status', '!=', 'maintenance')->count(),
-            'occupied' => Kamar::has('occupants')->count(),
-            'maintenance' => Kamar::where('status', 'maintenance')->count(),
+            'total' => Kamar::where('owner_id', $ownerId)->count(),
+            'available' => Kamar::where('owner_id', $ownerId)->doesntHave('occupants')->where('status', '!=', 'maintenance')->count(),
+            'occupied' => Kamar::where('owner_id', $ownerId)->has('occupants')->count(),
+            'maintenance' => Kamar::where('owner_id', $ownerId)->where('status', 'maintenance')->count(),
         ];
 
         // Total Penghuni: Count UNIQUE tenants referenced by rooms
-        $totalTenants = \Illuminate\Support\Facades\DB::table('riwayat_penghuni_kamar')->distinct('user_id')->count('user_id');
+        $totalTenants = \Illuminate\Support\Facades\DB::table('riwayat_penghuni_kamar')
+            ->join('kamar', 'kamar.id', '=', 'riwayat_penghuni_kamar.kamar_id')
+            ->where('kamar.owner_id', $ownerId)
+            ->distinct('user_id')
+            ->count('user_id');
 
         $floors = [
             '1' => 'Lantai 1',
@@ -134,7 +139,8 @@ class KamarController extends Controller
         ];
 
         // Get active room types for filters and Add Room modal
-        $roomTypes = TipeKamar::where('status', 'active')
+        $roomTypes = TipeKamar::where('owner_id', $ownerId)
+            ->where('status', 'active')
             ->orderBy('name')
             ->get();
 
@@ -161,9 +167,9 @@ class KamarController extends Controller
      */
     public function create()
     {
-        // Admin can see all active room types (created by owner)
-        // Since this is a single-owner system, we show all room types
-        $roomTypes = TipeKamar::where('status', 'active')
+        // Admin can only see their owner's active room types
+        $roomTypes = TipeKamar::where('owner_id', auth()->user()->ownerId())
+            ->where('status', 'active')
             ->orderBy('name')
             ->get();
 

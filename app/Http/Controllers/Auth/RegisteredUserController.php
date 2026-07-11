@@ -33,19 +33,31 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'boarding_house_name' => ['nullable', 'string', 'max:255'],
         ]);
 
+        // Pendaftaran publik kini membuat akun OWNER (pemilik kos) — titik masuk
+        // subscription SaaS. Penyewa bukan lagi akun, melainkan data yang dikelola owner.
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'tenant',
+            'role' => 'owner',
+            'status' => 'active',
+            // SaaS internal: mailer log-only, jadi owner langsung terverifikasi.
+            'email_verified_at' => now(),
+        ]);
+
+        // Buat profil/pengaturan kos awal untuk owner (kolom lain sudah ber-default).
+        \App\Models\PemilikKos::create([
+            'owner_id' => $user->id,
+            'boarding_house_name' => $request->boarding_house_name ?: ('Kos ' . $user->name),
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect(route('owner.dashboard', absolute: false));
     }
 }

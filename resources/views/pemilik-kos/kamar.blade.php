@@ -4,15 +4,19 @@
     <div class="flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
             <h2 class="font-bold text-2xl text-gray-800 leading-tight">
-                {{ __('Monitoring Kamar') }}
+                {{ __('Manajemen Kamar') }}
             </h2>
-            <p class="text-sm text-gray-500">Pantau status unit kamar Anda (View Only).</p>
+            <p class="text-sm text-gray-500">Kelola unit kamar kos Anda — tambah, ubah status, dan hapus.</p>
         </div>
-        <!-- No Add Button for Owner -->
+        <button type="button" onclick="openModal('kamarModal')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-3 px-6 rounded-xl shadow-md transition flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            TAMBAH KAMAR
+        </button>
     </div>
 @endsection
 
 @section('content')
+    @include('partials.modal-kamar', ['tipeKamar' => $tipeKamar])
     <div class="space-y-8 relative">
             
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -228,7 +232,17 @@
                                 </div>
                             </div>
                         </div>
-                        {{-- No Actions for Owner --}}
+                        <div class="flex flex-row md:flex-col items-stretch justify-center gap-2 p-4 border-t md:border-t-0 md:border-l border-gray-100 bg-gray-50/40 flex-shrink-0 md:w-44">
+                            <form action="{{ route('owner.kamar.updateStatus', $room->id) }}" method="POST" onsubmit="return confirm('Tandai kamar {{ $room->room_number }} sebagai tersedia?')" class="flex-1 md:flex-none">
+                                @csrf @method('PATCH')
+                                <input type="hidden" name="status" value="available">
+                                <button type="submit" class="w-full text-xs font-bold px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition">Selesai Perbaikan</button>
+                            </form>
+                            <form action="{{ route('owner.kamar.destroy', $room->id) }}" method="POST" onsubmit="return confirm('Hapus kamar {{ $room->room_number }} permanen?')" class="flex-1 md:flex-none">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="w-full text-xs font-bold px-4 py-2 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition">Hapus</button>
+                            </form>
+                        </div>
                     </div>
                 @elseif ($isOccupied)
                     @php
@@ -374,7 +388,17 @@
                                 </div>
                             </div>
                         </div>
-                         {{-- No Actions for Available Room (Read Only) --}}
+                        <div class="flex flex-row md:flex-col items-stretch justify-center gap-2 p-4 border-t md:border-t-0 md:border-l border-gray-100 bg-gray-50/40 flex-shrink-0 md:w-44">
+                            <form action="{{ route('owner.kamar.updateStatus', $room->id) }}" method="POST" onsubmit="return confirm('Tandai kamar {{ $room->room_number }} sebagai perbaikan?')" class="flex-1 md:flex-none">
+                                @csrf @method('PATCH')
+                                <input type="hidden" name="status" value="maintenance">
+                                <button type="submit" class="w-full text-xs font-bold px-4 py-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition">Tandai Perbaikan</button>
+                            </form>
+                            <form action="{{ route('owner.kamar.destroy', $room->id) }}" method="POST" onsubmit="return confirm('Hapus kamar {{ $room->room_number }} permanen?')" class="flex-1 md:flex-none">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="w-full text-xs font-bold px-4 py-2 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition">Hapus</button>
+                            </form>
+                        </div>
                     </div>
                 @endif
             @empty
@@ -566,3 +590,14 @@
         </div>
     </div>
 @endsection
+@push('tour')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    window.__pageTour = [
+        { element: 'a[href$="/owner/kamar/create"]', popover: { title: 'Tambah Kamar', description: 'Klik untuk menambah kamar: nomor, lantai, tipe, harga, dan status.' } },
+        { popover: { title: 'Aksi per kamar', description: 'Di tiap kartu kamar ada tombol ubah status (mis. perbaikan) dan hapus.' } },
+    ];
+    window.KostTour && window.KostTour.auto('owner-kamar-v1', window.__pageTour);
+});
+</script>
+@endpush

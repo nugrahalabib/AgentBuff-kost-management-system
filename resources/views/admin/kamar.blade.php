@@ -904,3 +904,14 @@
         @endif
     </script>
 @endsection
+
+@push('tour')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    window.__pageTour = [
+        { element: 'a[href$="/admin/kamar/create"]', popover: { title: 'Tambah Kamar', description: 'Tambah kamar baru: nomor, lantai, tipe, harga, dan status.' } },
+    ];
+    window.KostTour && window.KostTour.auto('admin-kamar-v1', window.__pageTour);
+});
+</script>
+@endpush

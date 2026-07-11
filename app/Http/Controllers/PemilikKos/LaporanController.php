@@ -27,6 +27,135 @@ class LaporanController extends Controller
     }
 
     /**
+     * Form buat laporan (owner generate sendiri — setara admin).
+     */
+    public function create()
+    {
+        return view('pemilik-kos.laporan-create', [
+            'reportTypes' => [
+                'financial_report'   => 'Laporan Keuangan & Transaksi',
+                'room_status_report' => 'Laporan Status Kamar',
+                'tenant_report'      => 'Laporan Data Penyewa',
+            ],
+        ]);
+    }
+
+    /**
+     * Generate laporan HANYA untuk kos milik owner ini (beda dgn admin yang loop
+     * semua owner). File PDF & Excel dibuat langsung.
+     */
+    public function generate(\Illuminate\Http\Request $request)
+    {
+        $validated = $request->validate([
+            'report_type' => 'required|in:financial_report,room_status_report,tenant_report,comprehensive_report',
+            'period_type' => 'nullable|in:monthly,annual',
+            'month' => 'required_if:period_type,monthly|nullable|numeric|min:1|max:12',
+            'year'  => 'required|numeric|min:2020|max:2100',
+        ]);
+
+        $owner = Auth::user();
+        $periodType = $validated['period_type'] ?? 'monthly';
+        $startMonth = (int) ($validated['month'] ?? 1);
+        $startYear  = (int) $validated['year'];
+        $endMonth   = $startMonth;
+        $endYear    = $startYear;
+
+        if ($periodType === 'annual') {
+            $startMonth = 1;
+            $endMonth = 12;
+        }
+
+        $data = [
+            'report_month' => $startMonth,
+            'report_year'  => $startYear,
+            'end_month'    => $endMonth,
+            'end_year'     => $endYear,
+        ];
+
+        $reportData = match ($validated['report_type']) {
+            'financial_report'     => $this->reportService->generateFinancialReport($owner, $data),
+            'room_status_report'   => $this->reportService->generateRoomStatusReport($owner, $data),
+            'tenant_report'        => $this->reportService->generateTenantReport($owner, $data),
+            'comprehensive_report' => $this->reportService->generateComprehensiveReport($owner, $data),
+            default => [],
+        };
+
+        $report = Laporan::create([
+            'owner_id'      => $owner->id,
+            'admin_id'      => $owner->id, // dibuat sendiri oleh owner (kolom NOT NULL)
+            'report_type'   => $validated['report_type'],
+            'report_month'  => $startMonth,
+            'report_year'   => $startYear,
+            'end_month'     => $endMonth,
+            'end_year'      => $endYear,
+            'title'         => $this->getReportTitle($validated['report_type'], $startMonth, $startYear, $endMonth, $endYear),
+            'status'        => 'sent',
+            'generated_at'  => now(),
+            'sent_at'       => now(),
+            'sent_by'       => $owner->id,
+        ]);
+
+        try {
+            $this->generateReportFiles($report, $reportData, $validated['report_type']);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Owner report file generation failed: ' . $e->getMessage());
+        }
+
+        \App\Services\LoggerService::log('create', 'Owner membuat laporan ' . $validated['report_type'], $report);
+
+        return redirect()->route('owner.laporan')->with('success', 'Laporan berhasil dibuat.');
+    }
+
+    /**
+     * Buat file PDF & Excel untuk laporan yang di-generate owner.
+     */
+    private function generateReportFiles(Laporan $report, $reportData, $reportType)
+    {
+        try {
+            $pdf = Pdf::loadView('pemilik-kos.laporan-pdf', [
+                'report' => $report,
+                'reportData' => $reportData,
+            ])->setPaper('a4', 'portrait');
+
+            $pdfPath = 'reports/' . date('Y/m') . '/';
+            \Illuminate\Support\Facades\Storage::makeDirectory($pdfPath);
+            $pdfFileName = 'laporan_owner' . $report->owner_id . '_' . $report->report_type . '_' . $report->report_year . '_' . $report->report_month . '.pdf';
+            \Illuminate\Support\Facades\Storage::put($pdfPath . $pdfFileName, $pdf->output());
+            $report->update(['file_path_pdf' => $pdfPath . $pdfFileName]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('PDF generation failed: ' . $e->getMessage());
+        }
+
+        try {
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setCellValue('A1', $report->title);
+            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+            $sheet->setCellValue('A2', 'Periode: ' . Carbon::createFromDate($report->report_year, $report->report_month)->format('F Y'));
+
+            $row = 4;
+            match ($report->report_type) {
+                'financial_report'     => $this->exportFinancialToExcel($sheet, $reportData, $row),
+                'room_status_report'   => $this->exportRoomStatusToExcel($sheet, $reportData, $row),
+                'tenant_report'        => $this->exportTenantToExcel($sheet, $reportData, $row),
+                'comprehensive_report' => $this->exportComprehensiveToExcel($sheet, $reportData, $row),
+            };
+
+            $xlsxPath = 'reports/' . date('Y/m') . '/';
+            \Illuminate\Support\Facades\Storage::makeDirectory($xlsxPath);
+            $xlsxFileName = 'laporan_owner' . $report->owner_id . '_' . $report->report_type . '_' . $report->report_year . '_' . $report->report_month . '.xlsx';
+            $writer = new Xlsx($spreadsheet);
+            ob_start();
+            $writer->save('php://output');
+            $excelContent = ob_get_clean();
+            \Illuminate\Support\Facades\Storage::put($xlsxPath . $xlsxFileName, $excelContent);
+            $report->update(['file_path_excel' => $xlsxPath . $xlsxFileName]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Excel generation failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Display reports sent by admin
      */
     public function index(\Illuminate\Http\Request $request)

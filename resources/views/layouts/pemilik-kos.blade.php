@@ -5,7 +5,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Owner Dashboard - Kos Mutiara 27</title>
+    <meta name="user-id" content="{{ auth()->id() }}">
+    <title>Owner Dashboard - AgentBuff KostCloud</title>
 
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <link rel="apple-touch-icon" href="{{ asset('favicon.svg') }}">
@@ -18,8 +19,9 @@
     <style>
         /* ================= TRANSISI SIDEBAR ================= */
         #main-sidebar {
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        [x-cloak] { display: none !important; }
 
         /* 1. Teks Menu Menghilang */
         .sidebar-text {
@@ -87,10 +89,15 @@
 </head>
 
 <body class="font-sans antialiased bg-gray-50">
-    <div class="flex h-screen overflow-hidden">
+    <div class="flex h-screen overflow-hidden" x-data="{ mobileOpen: false }">
+
+        {{-- Backdrop off-canvas (mobile) --}}
+        <div x-show="mobileOpen" x-cloak x-transition.opacity @click="mobileOpen = false"
+            class="fixed inset-0 bg-black/50 z-30 lg:hidden"></div>
 
         <aside id="main-sidebar"
-            class="w-64 bg-emerald-900 text-white flex flex-col shadow-2xl z-20 flex-shrink-0 relative">
+            class="w-64 bg-emerald-900 text-white flex flex-col shadow-2xl flex-shrink-0 fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 lg:relative lg:inset-auto lg:translate-x-0"
+            :class="mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
 
             <div id="sidebar-header"
                 class="h-20 flex items-center justify-between px-6 border-b border-emerald-800 bg-emerald-950 transition-all duration-300">
@@ -106,12 +113,12 @@
                         </svg>
                     </div>
                     <h1 class="text-xl font-bold tracking-wide text-white">
-                        Mutiara<span class="text-emerald-400">27</span>
+                        Kost<span class="text-emerald-400">Cloud</span>
                     </h1>
                 </a>
 
                 <button id="sidebar-toggle"
-                    class="text-emerald-400 hover:text-white p-2 rounded-lg hover:bg-emerald-800 transition flex-shrink-0">
+                    class="hidden lg:flex text-emerald-400 hover:text-white p-2 rounded-lg hover:bg-emerald-800 transition flex-shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -134,27 +141,6 @@
                         </path>
                     </svg>
                     <span class="sidebar-text font-medium">Dashboard</span>
-                </a>
-
-                <p class="menu-heading px-2 text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-2">
-                    Intelligence</p>
-                <a href="{{ route('owner.ai') }}"
-                    class="flex items-center px-4 py-3 {{ request()->routeIs('owner.ai') ? 'bg-emerald-800 text-white shadow-lg translate-x-1' : 'text-emerald-100 hover:bg-emerald-800/50 hover:text-white' }} rounded-xl transition-all duration-200 group"
-                    title="AI Assistant">
-                    <div class="relative flex-shrink-0 mr-3">
-                        <svg class="w-5 h-5 {{ request()->routeIs('owner.ai') ? 'text-emerald-400' : 'text-emerald-300 group-hover:text-white' }}"
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
-                            </path>
-                        </svg>
-                        <span class="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                            <span
-                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                    </div>
-                    <span class="sidebar-text font-medium">AI Assistant</span>
                 </a>
 
                 <p class="menu-heading px-2 text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-2 mt-4">
@@ -251,6 +237,17 @@
                     </svg>
                     <span class="sidebar-text font-medium">Pengaturan</span>
                 </a>
+
+                <a href="{{ route('owner.mcp') }}"
+                    class="flex items-center px-4 py-3 {{ request()->routeIs('owner.mcp') ? 'bg-emerald-800 text-white shadow-lg translate-x-1' : 'text-emerald-100 hover:bg-emerald-800/50 hover:text-white' }} rounded-xl transition-all duration-200 group"
+                    title="MCP / AI Agent">
+                    <svg class="w-5 h-5 flex-shrink-0 mr-3 {{ request()->routeIs('owner.mcp') ? 'text-emerald-400' : 'text-emerald-300 group-hover:text-white' }}"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span class="sidebar-text font-medium">MCP / AI Agent</span>
+                </a>
             </nav>
 
             <div class="p-4 bg-emerald-950 border-t border-emerald-900 flex-shrink-0">
@@ -274,8 +271,13 @@
 
         <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 flex flex-col">
             <div class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-10 flex-shrink-0">
-                <div class="py-4 px-4 sm:px-6 lg:px-8">
-                    @yield('header')
+                <div class="py-4 px-4 sm:px-6 lg:px-8 flex items-center gap-3">
+                    <button @click="mobileOpen = true" class="lg:hidden p-2 -ml-1 text-gray-600 hover:text-emerald-700 flex-shrink-0" aria-label="Buka menu">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <div class="flex-1 min-w-0">
+                        @yield('header')
+                    </div>
                 </div>
             </div>
 
@@ -284,6 +286,16 @@
             </div>
         </main>
     </div>
+
+    {{-- Tombol Panduan (tur interaktif) + slot tur per-halaman --}}
+    <button type="button"
+        onclick="window.KostTour && window.__pageTour && window.KostTour.start(window.__pageTour)"
+        class="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 transition"
+        title="Putar panduan halaman ini">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span class="hidden sm:inline text-sm font-bold">Panduan</span>
+    </button>
+    @stack('tour')
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>

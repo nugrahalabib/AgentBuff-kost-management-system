@@ -5,11 +5,30 @@ namespace App\Http\Controllers\PemilikKos;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Transaksi;
+use App\Http\Controllers\Concerns\ManagesTenants;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class PenyewaController extends Controller
 {
+    use ManagesTenants;
+
+    /** Form tambah penyewa baru (owner). */
+    public function create()
+    {
+        return view('pemilik-kos.penyewa-create', [
+            'rooms' => $this->availableRoomsForOwner(),
+        ]);
+    }
+
+    /** Simpan penyewa baru + opsional tempatkan ke kamar (owner). */
+    public function store(Request $request)
+    {
+        $this->persistNewTenant($request);
+
+        return redirect()->route('owner.penyewa')->with('success', 'Penyewa baru berhasil ditambahkan.');
+    }
+
     /**
      * Display tenants (view-only for owner)
      */
@@ -22,8 +41,9 @@ class PenyewaController extends Controller
 
         $ownerId = Auth::id();
 
-        // Query Tenant - Global / Unscoped as requested (100% Admin Mirror)
+        // Query Tenant — HANYA penyewa milik owner ini (multi-tenant).
         $query = User::where('role', 'tenant')
+            ->whereHas('tenantProfile', fn ($q) => $q->where('owner_id', $ownerId))
             ->with(['tenantProfile', 'tenantTransactions', 'currentRoom.roomType', 'occupiedRoom.roomType']);
 
         // Filter by active status (has room or not)
@@ -126,15 +146,17 @@ class PenyewaController extends Controller
 
         // Calculate Dashboard Stats (Global / Unscoped as Admin)
         
-        // Total Penghuni (Active only)
+        // Total Penghuni (Active only) — scoped owner
         $totalTenants = User::where('role', 'tenant')
+            ->whereHas('tenantProfile', fn ($q) => $q->where('owner_id', $ownerId))
             ->where(function($q) {
                 $q->whereHas('currentRoom')->orWhereHas('occupiedRoom');
             })
             ->count();
 
-        // Penghuni Baru (Last 30 days)
+        // Penghuni Baru (Last 30 days) — scoped owner
         $newTenants = User::where('role', 'tenant')
+            ->whereHas('tenantProfile', fn ($q) => $q->where('owner_id', $ownerId))
             ->where('created_at', '>=', now()->subDays(30))
             ->where(function($q) {
                 $q->whereHas('currentRoom')->orWhereHas('occupiedRoom');
@@ -142,7 +164,8 @@ class PenyewaController extends Controller
             ->count();
             
         // Kontrak yang akan habis dalam $reminderDays hari ke depan
-        $expiringContracts = Transaksi::where('status', 'verified_by_owner')
+        $expiringContracts = Transaksi::where('owner_id', $ownerId)
+            ->where('status', 'verified_by_owner')
             ->whereBetween('period_end_date', [
                 now()->startOfDay(),
                 now()->addDays($reminderDays)->endOfDay()
@@ -151,7 +174,8 @@ class PenyewaController extends Controller
             ->count('penyewa_id');
             
         // Nunggak (Expired) - only tenants with active rooms
-        $delinquent = Transaksi::where('status', 'verified_by_owner')
+        $delinquent = Transaksi::where('owner_id', $ownerId)
+            ->where('status', 'verified_by_owner')
             ->where('period_end_date', '<', now()->startOfDay())
             ->whereNotExists(function ($query) {
                 $query->select(\Illuminate\Support\Facades\DB::raw(1))
@@ -179,7 +203,7 @@ class PenyewaController extends Controller
 
         // Available floors for filter
         // Admin logic: `App\Models\Kamar::distinct()->pluck('floor_number')`
-        $availableFloors = \App\Models\Kamar::distinct()->pluck('floor_number')->sort()->values();
+        $availableFloors = \App\Models\Kamar::where('owner_id', $ownerId)->distinct()->pluck('floor_number')->sort()->values();
 
         return view('pemilik-kos.penyewa', [
             'dataPenyewa' => $tenants,
@@ -194,6 +218,7 @@ class PenyewaController extends Controller
             'selectedActive' => $activeStatus,
             'search' => $search,
             'viewMode' => $viewMode,
+            'rooms' => $this->availableRoomsForOwner(),
         ]);
     }
 

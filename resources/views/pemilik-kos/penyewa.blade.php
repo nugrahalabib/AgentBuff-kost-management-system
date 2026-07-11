@@ -8,10 +8,15 @@
             </h2>
             <p class="text-sm text-gray-500">Kelola {{ $totalPenyewa }} penyewa aktif saat ini.</p>
         </div>
+        <button type="button" onclick="openModal('penyewaModal')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-3 px-6 rounded-xl shadow-md transition flex items-center whitespace-nowrap">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            TAMBAH PENYEWA
+        </button>
     </div>
 @endsection
 
 @section('content')
+    @include('partials.modal-penyewa', ['rooms' => $rooms])
     <div class="space-y-8">
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -383,3 +388,13 @@
         }
     </script>
 @endsection
+@push('tour')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    window.__pageTour = [
+        { element: 'a[href$="/owner/penyewa/tambah"]', popover: { title: 'Tambah Penyewa', description: 'Catat penyewa baru & langsung tempatkan ke kamar yang tersedia.' } },
+    ];
+    window.KostTour && window.KostTour.auto('owner-penyewa-v1', window.__pageTour);
+});
+</script>
+@endpush

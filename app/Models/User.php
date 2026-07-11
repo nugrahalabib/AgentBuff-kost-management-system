@@ -8,39 +8,51 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasApiTokens;
 
     protected $table = 'user';
 
     /**
-     * Boot the model.
-     * Enforces single-owner constraint: only one user with role 'owner' is allowed.
+     * Resolusi owner (pemilik kos) yang menaungi user ini — inti model multi-tenant:
+     * - role 'owner'  -> dirinya sendiri
+     * - role 'admin'  -> owner yang membuat akun admin ini (admin.owner_id)
+     * - lainnya       -> null
+     *
+     * Dinamai resolveOwner() (bukan owner()) agar tidak bentrok dengan magic
+     * relationship Eloquent saat diakses sebagai properti.
      */
-    protected static function boot()
+    public function resolveOwner(): ?User
     {
-        parent::boot();
+        if ($this->role === 'owner') {
+            return $this;
+        }
+        if ($this->role === 'admin') {
+            return $this->adminProfile?->owner;
+        }
+        return null;
+    }
 
-        static::saving(function (User $user) {
-            if ($user->role === 'owner') {
-                $existingOwner = static::where('role', 'owner')
-                    ->where('id', '!=', $user->id ?? 0)
-                    ->exists();
+    /** Id owner yang menaungi user ini (lihat resolveOwner()). */
+    public function ownerId(): ?int
+    {
+        if ($this->role === 'owner') {
+            return $this->id;
+        }
+        if ($this->role === 'admin') {
+            return $this->adminProfile?->owner_id;
+        }
+        return null;
+    }
 
-                if ($existingOwner) {
-                    throw new \Illuminate\Validation\ValidationException(
-                        \Illuminate\Support\Facades\Validator::make([], []),
-                        new \Illuminate\Http\JsonResponse([
-                            'message' => 'Hanya boleh ada satu akun owner dalam sistem.',
-                            'errors' => ['role' => ['Akun owner sudah ada. Sistem hanya mengizinkan satu owner.']]
-                        ], 422)
-                    );
-                }
-            }
-        });
+    /** Apakah user ini seorang pengelola kos (owner atau admin). */
+    public function isManager(): bool
+    {
+        return in_array($this->role, ['owner', 'admin'], true);
     }
 
     /**

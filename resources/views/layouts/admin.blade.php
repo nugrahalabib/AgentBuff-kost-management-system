@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Admin Panel - Kos Mutiara 27</title>
+    <meta name="user-id" content="{{ auth()->id() }}">
+    <title>Admin Panel - AgentBuff KostCloud</title>
 
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <link rel="apple-touch-icon" href="{{ asset('favicon.svg') }}">
@@ -15,9 +16,10 @@
     
     <style>
         /* ================= TRANSISI SIDEBAR (Style Owner) ================= */
-        #main-sidebar { 
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        #main-sidebar {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        [x-cloak] { display: none !important; }
 
         /* Teks Menu */
         .sidebar-text { 
@@ -58,9 +60,14 @@
     </style>
 </head>
 <body class="font-sans antialiased bg-gray-50">
-    <div class="flex h-screen overflow-hidden">
-        
-        <aside id="main-sidebar" class="w-64 bg-emerald-900 text-white flex flex-col shadow-2xl z-20 flex-shrink-0 relative">
+    <div class="flex h-screen overflow-hidden" x-data="{ mobileOpen: false }">
+
+        {{-- Backdrop off-canvas (mobile) --}}
+        <div x-show="mobileOpen" x-cloak x-transition.opacity @click="mobileOpen = false"
+            class="fixed inset-0 bg-black/50 z-30 lg:hidden"></div>
+
+        <aside id="main-sidebar" class="w-64 bg-emerald-900 text-white flex flex-col shadow-2xl flex-shrink-0 fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 lg:relative lg:inset-auto lg:translate-x-0"
+            :class="mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
             
             <div id="sidebar-header" class="h-20 flex items-center justify-between px-6 border-b border-emerald-800 bg-emerald-950 transition-all duration-300">
                 
@@ -76,7 +83,7 @@
                     </h1>
                 </a>
 
-                <button id="sidebar-toggle" class="text-emerald-400 hover:text-white p-2 rounded-lg hover:bg-emerald-800 transition flex-shrink-0">
+                <button id="sidebar-toggle" class="hidden lg:flex text-emerald-400 hover:text-white p-2 rounded-lg hover:bg-emerald-800 transition flex-shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
@@ -104,7 +111,6 @@
                     </button>
                     <div id="menu-penyewa" class="submenu pl-12 pr-2 space-y-1 {{ request()->routeIs('admin.penyewa.*') ? 'open' : '' }}">
                         <a href="{{ route('admin.penyewa') }}" class="block px-3 py-2 text-sm text-emerald-200 hover:text-white hover:bg-emerald-800 rounded-lg transition">Data Penyewa</a>
-                        <a href="{{ route('admin.akun-penyewa') }}" class="block px-3 py-2 text-sm text-emerald-200 hover:text-white hover:bg-emerald-800 rounded-lg transition">Data Akun Penyewa</a>
 
                     </div>
                 </div>
@@ -126,11 +132,6 @@
                     <span class="sidebar-text font-medium">Laporan</span>
                 </a>
 
-                <a href="{{ route('admin.konten.index') }}" class="nav-item flex items-center px-4 py-3 {{ request()->routeIs('admin.konten*') ? 'bg-emerald-800 text-white shadow-lg translate-x-1' : 'text-emerald-100 hover:bg-emerald-800/50 hover:text-white' }} rounded-xl transition-all duration-200 group">
-                    <svg class="w-5 h-5 flex-shrink-0 mr-3 {{ request()->routeIs('admin.konten*') ? 'text-emerald-400' : 'text-emerald-300 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                    <span class="sidebar-text font-medium">Kelola Konten</span>
-                </a>
-
                 <p class="menu-heading px-2 text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-2 mt-4">Sistem</p>
 
                 <a href="{{ route('admin.notifikasi') }}" class="nav-item flex items-center px-4 py-3 {{ request()->routeIs('admin.notifikasi') ? 'bg-emerald-800 text-white shadow-lg translate-x-1' : 'text-emerald-100 hover:bg-emerald-800/50 hover:text-white' }} rounded-xl transition-all duration-200 group">
@@ -139,6 +140,11 @@
                         <span class="absolute top-0 right-0 block h-2 w-2 rounded-full ring-1 ring-emerald-900 bg-red-500"></span>
                     </div>
                     <span class="sidebar-text font-medium">Notifikasi</span>
+                </a>
+
+                <a href="{{ route('admin.mcp') }}" class="nav-item flex items-center px-4 py-3 {{ request()->routeIs('admin.mcp') ? 'bg-emerald-800 text-white shadow-lg translate-x-1' : 'text-emerald-100 hover:bg-emerald-800/50 hover:text-white' }} rounded-xl transition-all duration-200 group">
+                    <svg class="w-5 h-5 flex-shrink-0 mr-3 {{ request()->routeIs('admin.mcp') ? 'text-emerald-400' : 'text-emerald-300 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    <span class="sidebar-text font-medium">MCP / AI Agent</span>
                 </a>
 
             </nav>
@@ -161,8 +167,13 @@
 
         <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 flex flex-col">
             <div class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-10 flex-shrink-0">
-                <div class="py-4 px-4 sm:px-6 lg:px-8">
-                    @yield('header') 
+                <div class="py-4 px-4 sm:px-6 lg:px-8 flex items-center gap-3">
+                    <button @click="mobileOpen = true" class="lg:hidden p-2 -ml-1 text-gray-600 hover:text-emerald-700 flex-shrink-0" aria-label="Buka menu">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <div class="flex-1 min-w-0">
+                        @yield('header')
+                    </div>
                 </div>
             </div>
 
@@ -272,5 +283,15 @@
         .custom-scrollbar-dark::-webkit-scrollbar-thumb:hover { background: #10b981; } 
     </style>
     @stack('scripts')
+
+    {{-- Tombol Panduan (tur interaktif) + slot tur per-halaman --}}
+    <button type="button"
+        onclick="window.KostTour && window.__pageTour && window.KostTour.start(window.__pageTour)"
+        class="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 transition"
+        title="Putar panduan halaman ini">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span class="hidden sm:inline text-sm font-bold">Panduan</span>
+    </button>
+    @stack('tour')
 </body>
 </html>

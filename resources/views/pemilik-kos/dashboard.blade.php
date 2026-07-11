@@ -34,6 +34,8 @@
 @section('content')
     <div class="space-y-8">
 
+        @include('partials.onboarding-owner')
+
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             <!-- Total Pemasukan -->
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
@@ -382,3 +384,26 @@
         }
     </script>
 @endsection
+@push('tour')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    window.__pageTour = [
+        { popover: { title: 'Selamat datang di AgentBuff KostCloud! 👋', description: 'Panduan singkat mengenal dashboard Anda. Klik “Lanjut”.' } },
+        @if(!($setupComplete ?? true))
+        { element: '#onboarding-card', popover: { title: 'Langkah Awal — ikuti berurutan 🧭', description: 'Untuk pengguna baru, kartu ini memandu setup kos secara berurutan: (1) Buat Tipe Kamar → (2) Tambah Kamar → (3) Tambah Penyewa → (4) Catat Transaksi. Klik tombol tiap langkah untuk langsung membuka form-nya; langkah otomatis tercentang saat selesai, dan kartu hilang saat setup beres.' } },
+        @else
+        { popover: { title: 'Urutan menyiapkan kos 🧭', description: 'Disarankan mengerjakan berurutan: (1) Buat Tipe Kamar → (2) Tambah Kamar → (3) Tambah Penyewa → (4) Catat Transaksi. Ikuti urutan ini agar tidak bolak-balik antar halaman.' } },
+        @endif
+        { element: 'a[href$="/owner/dashboard"]', popover: { title: 'Dashboard', description: 'Ringkasan keuangan, okupansi kamar, dan aktivitas kos Anda.' } },
+        { element: 'a[href$="/owner/kamar"]', popover: { title: 'Data Kamar', description: 'Tambah, ubah status, dan hapus kamar kos Anda.' } },
+        { element: 'a[href$="/owner/penyewa"]', popover: { title: 'Data Penyewa', description: 'Catat penyewa baru dan tempatkan ke kamar yang tersedia.' } },
+        { element: 'a[href$="/owner/verifikasi-transaksi"]', popover: { title: 'Data Transaksi', description: 'Input pembayaran manual & verifikasi bukti transfer penyewa.' } },
+        { element: 'a[href$="/owner/laporan"]', popover: { title: 'Laporan', description: 'Buat laporan keuangan, kamar, dan penyewa (PDF & Excel).' } },
+        { element: 'a[href$="/owner/admin-control"]', popover: { title: 'Tim & Akses', description: 'Buat akun admin untuk membantu mengelola kos (opsional).' } },
+        { element: 'a[href$="/owner/settings"]', popover: { title: 'Pengaturan', description: 'Atur info kos, rekening bank, dan denda keterlambatan.' } },
+        { popover: { title: 'Siap! 🎉', description: 'Mulai dengan menambah kamar di menu Data Kamar. Tombol “Panduan” di kanan bawah memutar ulang tur ini kapan saja.' } },
+    ];
+    window.KostTour && window.KostTour.auto('owner-dashboard-v1', window.__pageTour);
+});
+</script>
+@endpush

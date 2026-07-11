@@ -10,6 +10,10 @@
         </div>
         
         <div class="flex items-center gap-3">
+            <button type="button" onclick="openModal('laporanModal')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-2.5 px-5 rounded-lg shadow-md transition flex items-center whitespace-nowrap">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Buat Laporan
+            </button>
             <div class="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg flex items-center shadow-sm overflow-hidden">
                 <a href="{{ route('owner.laporan', ['month' => \Carbon\Carbon::createFromDate($currentYear, $currentMonth, 1)->subMonth()->month, 'year' => \Carbon\Carbon::createFromDate($currentYear, $currentMonth, 1)->subMonth()->year]) }}" class="px-3 py-2 hover:bg-gray-50 border-r border-gray-300 transition block">
                     <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
@@ -37,6 +41,7 @@
 @endsection
 
 @section('content')
+    @include('partials.modal-laporan')
     <div class="space-y-8">
             
         <!-- Financial Summary Cards (Replaced per User Request) -->
@@ -1150,3 +1155,13 @@
         </div>
     </div>
 @endsection
+@push('tour')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    window.__pageTour = [
+        { element: 'a[href$="/owner/laporan/create"]', popover: { title: 'Buat Laporan', description: 'Hasilkan laporan keuangan, status kamar, atau data penyewa (PDF & Excel).' } },
+    ];
+    window.KostTour && window.KostTour.auto('owner-laporan-v1', window.__pageTour);
+});
+</script>
+@endpush

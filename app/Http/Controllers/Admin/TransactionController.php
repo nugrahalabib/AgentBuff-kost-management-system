@@ -18,12 +18,14 @@ class TransactionController extends Controller
      */
     public function index(Request $request)
     {
+        $ownerId = auth()->user()->ownerId();
+
         $status = $request->get('status', null);
         $search = $request->get('search', null);
         $floor = $request->get('floor', null);
         $date = $request->get('date', null);
 
-        $query = Transaksi::with(['tenant', 'room', 'paymentProofs']);
+        $query = Transaksi::where('owner_id', $ownerId)->with(['tenant', 'room', 'paymentProofs']);
 
         // Filter by status
         if ($status && $status !== 'semua') {
@@ -74,16 +76,16 @@ class TransactionController extends Controller
         $listTransactions = $listQuery->orderBy('updated_at', 'desc')->paginate(10, ['*'], 'list_page');
 
         $stats = [
-            'total' => Transaksi::count(),
-            'pending' => Transaksi::where('status', 'pending_verification')->count(),
-            'verified_admin' => Transaksi::where('status', 'verified_by_admin')->count(),
-            'verified_owner' => Transaksi::where('status', 'verified_by_owner')->count(),
+            'total' => Transaksi::where('owner_id', $ownerId)->count(),
+            'pending' => Transaksi::where('owner_id', $ownerId)->where('status', 'pending_verification')->count(),
+            'verified_admin' => Transaksi::where('owner_id', $ownerId)->where('status', 'verified_by_admin')->count(),
+            'verified_owner' => Transaksi::where('owner_id', $ownerId)->where('status', 'verified_by_owner')->count(),
         ];
 
-        $todayTransactions = Transaksi::whereDate('created_at', today())->count();
+        $todayTransactions = Transaksi::where('owner_id', $ownerId)->whereDate('created_at', today())->count();
 
         // Get distinct floors for filter
-        $floors = \App\Models\Kamar::distinct()->orderBy('floor_number')->pluck('floor_number');
+        $floors = \App\Models\Kamar::where('owner_id', $ownerId)->distinct()->orderBy('floor_number')->pluck('floor_number');
 
         return view('admin.transaksi', [
             'transaksiGrid' => $gridTransactions,
@@ -95,14 +97,14 @@ class TransactionController extends Controller
             'selectedStatus' => $status,
             'search' => $search,
             'floors' => $floors,
-            'penyewaUntukJs' => \App\Models\User::where('role', 'tenant')->with('currentRoom')->orderBy('name')->get()
+            'penyewaUntukJs' => \App\Models\User::where('role', 'tenant')->whereHas('tenantProfile', fn($q) => $q->where('owner_id', $ownerId))->with('currentRoom')->orderBy('name')->get()
                 ->map(fn($t) => [
                     'id'          => $t->id,
                     'name'        => $t->name,
                     'kamar_id'     => $t->currentRoom?->id,
                     'room_number' => $t->currentRoom?->room_number,
                 ])->values(),
-            'kamarUntukJs' => \App\Models\Kamar::with(['roomType', 'occupants'])->orderBy('room_number')->get()
+            'kamarUntukJs' => \App\Models\Kamar::where('owner_id', $ownerId)->with(['roomType', 'occupants'])->orderBy('room_number')->get()
                 ->map(fn($r) => [
                     'id'          => $r->id,
                     'number'      => $r->room_number,
@@ -263,7 +265,7 @@ class TransactionController extends Controller
 
         $tenant = \App\Models\User::findOrFail($validated['penyewa_id']);
         $room = \App\Models\Kamar::findOrFail($validated['kamar_id']);
-        $owner = \App\Models\User::where('role', 'owner')->first();
+        $owner = auth()->user()->resolveOwner();
 
         // Generate Invoice Number
         $prefix = 'INV-' . date('ym') . '-';

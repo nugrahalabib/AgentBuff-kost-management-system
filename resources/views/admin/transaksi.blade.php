@@ -1028,3 +1028,13 @@
 
 
 @endsection
+@push('tour')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    window.__pageTour = [
+        { popover: { title: 'Data Transaksi', description: 'Verifikasi bukti pembayaran penyewa, atau catat pembayaran manual (tunai/transfer) lewat tombol input transaksi.' } },
+    ];
+    window.KostTour && window.KostTour.auto('admin-transaksi-v1', window.__pageTour);
+});
+</script>
+@endpush
