@@ -66,6 +66,12 @@
                         </svg>
                         Checkout Penyewa
                     </button>
+                @else
+                    <a href="{{ route('admin.transaksi', ['penyewa' => $penyewa->id]) }}"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition shadow-sm hover:shadow-md">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Tempatkan ke Kamar
+                    </a>
                 @endif
             </div>
         </div>
@@ -472,10 +478,11 @@
                                     <th class="py-3 px-2 font-medium text-gray-500 uppercase text-xs">Periode</th>
                                     <th class="py-3 px-2 font-medium text-gray-500 uppercase text-xs">Jumlah</th>
                                     <th class="py-3 px-2 font-medium text-gray-500 uppercase text-xs">Status</th>
+                                    <th class="py-3 px-2 font-medium text-gray-500 uppercase text-xs">Bukti</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-50">
-                                @forelse($penyewa->tenantTransactions->sortByDesc('created_at')->take(5) as $tx)
+                                @forelse($penyewa->tenantTransactions->sortByDesc('created_at') as $tx)
                                     <tr>
                                         <td class="py-3 px-2 text-gray-900">{{ $tx->created_at->format('d M Y') }}</td>
                                         <td class="py-3 px-2 text-gray-600">
@@ -502,10 +509,19 @@
                                                     class="inline-flex px-2 py-0.5 rounded text-xs font-bold bg-gray-100 text-gray-600">{{ $tx->status }}</span>
                                             @endif
                                         </td>
+                                        <td class="py-3 px-2">
+                                            @php($proof = $tx->paymentProofs->first())
+                                            @if($proof)
+                                                <a href="{{ route('payment-proof.view', $proof->id) }}" target="_blank"
+                                                    class="text-emerald-600 hover:text-emerald-700 text-xs font-semibold">Lihat Bukti</a>
+                                            @else
+                                                <span class="text-gray-300 text-xs">—</span>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="py-6 text-center text-gray-400 text-sm">Belum ada riwayat
+                                        <td colspan="5" class="py-6 text-center text-gray-400 text-sm">Belum ada riwayat
                                             transaksi.</td>
                                     </tr>
                                 @endforelse

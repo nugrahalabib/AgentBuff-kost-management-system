@@ -246,7 +246,7 @@ class PenyewaController extends Controller
 
         abort_unless($user->tenantProfile && $user->tenantProfile->owner_id === auth()->user()->ownerId(), 404);
 
-        $user->load(['tenantProfile', 'currentRoom.roomType', 'occupiedRoom.roomType', 'tenantTransactions']);
+        $user->load(['tenantProfile', 'currentRoom.roomType', 'occupiedRoom.roomType', 'tenantTransactions.paymentProofs']);
 
         return view('admin.biodata-penyewa', [
             'penyewa' => $user,

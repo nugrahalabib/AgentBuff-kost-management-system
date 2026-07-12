@@ -96,8 +96,24 @@ class TransactionController extends Controller
 
         $tenantsForModal = \App\Models\User::where('role', 'tenant')
             ->whereHas('tenantProfile', fn ($q) => $q->where('owner_id', $owner->id))
+            ->with(['occupiedRoom', 'currentRoom'])
             ->orderBy('name')->get();
         $roomsForModal = \App\Models\Kamar::where('owner_id', $owner->id)->with('roomType')->withCount('occupants')->orderBy('room_number')->get();
+
+        // Data ringkas untuk dropdown dinamis (Alpine) di modal tambah transaksi:
+        // tiap penyewa membawa id kamar aktifnya (bila ada -> perpanjangan).
+        $penyewaData = $tenantsForModal->map(fn ($t) => [
+            'id' => $t->id,
+            'name' => $t->name,
+            'kamar_id' => $t->activeRoom->id ?? null,
+        ])->values();
+        $roomData = $roomsForModal->map(fn ($r) => [
+            'id' => $r->id,
+            'label' => 'Kamar ' . $r->room_number . ' — ' . ($r->roomType->name ?? '-'),
+            'capacity' => $r->roomType->capacity ?? 1,
+            'occupants' => $r->occupants_count ?? 0,
+            'price' => (float) $r->rent_per_person,
+        ])->values();
 
         return view('pemilik-kos.data-transaksi', [
             'transaksiGrid' => $gridTransactions,
@@ -108,6 +124,9 @@ class TransactionController extends Controller
             'floors' => $floors,
             'tenants' => $tenantsForModal,
             'rooms' => $roomsForModal,
+            'penyewaData' => $penyewaData,
+            'roomData' => $roomData,
+            'preselectPenyewa' => $request->query('penyewa'),
         ]);
     }
 
@@ -149,16 +168,7 @@ class TransactionController extends Controller
         // original (untrusted) submitted amount.
         $approvedAmount = $transaction->provisional_amount ?? $transaction->amount;
 
-        $transaction->update([
-            'status' => $validated['status'] === 'approved' ? 'verified_by_owner' : 'rejected_by_owner',
-            'owner_verified_at' => now(),
-            'owner_verified_by' => Auth::id(),
-            'owner_notes' => $validated['notes'] ?? null,
-            'final_amount' => $validated['status'] === 'approved' ? $approvedAmount : 0,
-        ]);
-
-        // Log verification
-        PaymentVerificationLog::create([
+        $logData = [
             'transaksi_id' => $transaction->id,
             'verified_by' => Auth::id(),
             'verification_type' => 'owner',
@@ -167,66 +177,46 @@ class TransactionController extends Controller
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
             'verified_at' => now(),
-        ]);
+        ];
 
-        // If approved, assign room to tenant and update lease dates
-        if ($validated['status'] === 'approved' && $transaction->kamar_id) {
-            $room = \App\Models\Kamar::find($transaction->kamar_id);
+        if ($validated['status'] === 'approved') {
+            // Update status, log verifikasi, dan PENEMPATAN dijalankan atomik: bila
+            // kamar penuh, assignRoomAfterPayment() melempar error sehingga update
+            // status & log ikut ter-rollback (tidak ada data setengah jadi).
+            try {
+                DB::transaction(function () use ($transaction, $approvedAmount, $validated, $logData) {
+                    $transaction->update([
+                        'status' => 'verified_by_owner',
+                        'owner_verified_at' => now(),
+                        'owner_verified_by' => Auth::id(),
+                        'owner_notes' => $validated['notes'] ?? null,
+                        'final_amount' => $approvedAmount,
+                    ]);
 
-            if (!$room) {
-                return back()->with('error', 'Kamar tidak ditemukan atau telah dihapus.');
+                    PaymentVerificationLog::create($logData);
+
+                    // Satu fungsi penempatan (attach/reaktivasi + status kamar +
+                    // notifikasi "pembayaran berhasil" ke penyewa di dalamnya).
+                    $result = app(\App\Services\RoomAllocationService::class)->assignRoomAfterPayment($transaction);
+                    if (! $result['ok']) {
+                        throw new \RuntimeException($result['error']);
+                    }
+                });
+            } catch (\RuntimeException $e) {
+                return back()->with('error', $e->getMessage());
             }
-
-            // Check if tenant is already in the room (extension case)
-            $isExistingOccupant = $room->occupants()->where('user.id', $transaction->penyewa_id)->exists();
-
-            // Validate room capacity before adding new tenant
-            if (!$isExistingOccupant && !$room->hasAvailableSlot()) {
-                return back()->with('error', 'Kamar sudah penuh! Tidak dapat menambahkan penyewa baru. Kapasitas kamar: ' . ($room->roomType?->capacity ?? 1) . ' orang.');
-            }
-
-            // Determine lease start date (use existing if already set, otherwise use transaction's period start)
-            $leaseStartDate = $room->lease_start_date ?? $transaction->period_start_date;
-
-            // Extend lease end date to the new period end date
-            $leaseEndDate = $transaction->period_end_date;
-
-            // Add tenant to riwayat_penghuni_kamar pivot table (if not already there).
-            // The pivot table is the source of truth for occupancy; we no longer
-            // touch the deprecated kamar.current_occupants counter.
-            if (!$isExistingOccupant) {
-                $room->occupants()->attach($transaction->penyewa_id, [
-                    'check_in_date' => $transaction->period_start_date,
-                ]);
-            }
-
-            // Refresh so isFull() reflects the new attach above.
-            $room->refresh();
-
-            // Status is 'occupied' only when room is full, otherwise stays 'available'
-            $room->update([
-                'status' => $room->isFull() ? 'occupied' : 'available',
-                'lease_start_date' => $leaseStartDate,
-                'lease_end_date' => $leaseEndDate,
+        } else {
+            // Ditolak: update status + log + notifikasi penyewa (tanpa penempatan).
+            $transaction->update([
+                'status' => 'rejected_by_owner',
+                'owner_verified_at' => now(),
+                'owner_verified_by' => Auth::id(),
+                'owner_notes' => $validated['notes'] ?? null,
+                'final_amount' => 0,
             ]);
 
-            // Notify tenant that payment is completed
-            $roomName = $transaction->room->roomType->name ?? 'Kamar';
-            $periodInfo = $transaction->period_end_date
-                ? 'Masa sewa Anda sampai ' . $transaction->period_end_date->format('d M Y') . '.'
-                : '';
-            Notification::create([
-                'user_id' => $transaction->penyewa_id,
-                'type' => 'payment_completed',
-                'category' => 'finance',
-                'title' => 'Pembayaran Berhasil!',
-                'message' => "Pembayaran untuk {$roomName} telah diverifikasi. {$periodInfo}",
-                'related_entity_type' => 'transaction',
-                'related_entity_id' => $transaction->id,
-                'priority' => 'high',
-            ]);
-        } elseif ($validated['status'] === 'rejected') {
-            // Payment rejected by owner - notify tenant
+            PaymentVerificationLog::create($logData);
+
             $roomName = $transaction->room?->roomType?->name ?? 'kamar';
             $notes = $validated['notes'] ?? null;
             $rejectionNotes = $notes ? " Alasan: {$notes}" : '';
@@ -323,23 +313,45 @@ class TransactionController extends Controller
     /**
      * Form input transaksi/pembayaran manual (owner).
      */
-    public function createManual()
+    public function createManual(Request $request)
     {
         $ownerId = Auth::id();
 
         $tenants = \App\Models\User::where('role', 'tenant')
             ->whereHas('tenantProfile', fn ($q) => $q->where('owner_id', $ownerId))
+            ->with(['occupiedRoom', 'currentRoom'])
             ->orderBy('name')
             ->get();
 
         $rooms = \App\Models\Kamar::where('owner_id', $ownerId)
             ->with('roomType')
+            ->withCount('occupants')
             ->orderBy('room_number')
             ->get();
+
+        // Data ringkas untuk dropdown dinamis (Alpine): tiap penyewa membawa id
+        // kamar aktifnya (bila ada -> perpanjangan); tiap kamar membawa kapasitas,
+        // okupansi, dan harga per orang.
+        $penyewaData = $tenants->map(fn ($t) => [
+            'id' => $t->id,
+            'name' => $t->name,
+            'kamar_id' => $t->activeRoom->id ?? null,
+        ])->values();
+
+        $roomData = $rooms->map(fn ($r) => [
+            'id' => $r->id,
+            'label' => 'Kamar ' . $r->room_number . ' — ' . ($r->roomType->name ?? '-'),
+            'capacity' => $r->roomType->capacity ?? 1,
+            'occupants' => $r->occupants_count ?? 0,
+            'price' => (float) $r->rent_per_person,
+        ])->values();
 
         return view('pemilik-kos.transaksi-create', [
             'tenants' => $tenants,
             'rooms' => $rooms,
+            'penyewaData' => $penyewaData,
+            'roomData' => $roomData,
+            'preselectPenyewa' => $request->query('penyewa'),
         ]);
     }
 
@@ -357,7 +369,7 @@ class TransactionController extends Controller
             'amount'     => 'required|numeric|min:1',
             'duration'   => 'required|integer|min:1|max:24',
             'payment_method' => 'required|in:cash,manual_transfer,edc',
-            'payment_proof'  => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'payment_proof'  => 'required|image|mimes:jpg,jpeg,png|max:2048',
             'notes'      => 'nullable|string|max:1000',
         ], [
             'penyewa_id.required' => 'Penyewa harus dipilih.',
@@ -372,12 +384,6 @@ class TransactionController extends Controller
         $tenant = \App\Models\User::findOrFail($validated['penyewa_id']);
         $room = \App\Models\Kamar::with('roomType')->findOrFail($validated['kamar_id']);
 
-        // Cek kapasitas SEBELUM membuat transaksi (hindari data setengah jadi).
-        $isExistingOccupant = $room->occupants()->where('user.id', $tenant->id)->exists();
-        if (! $isExistingOccupant && ! $room->hasAvailableSlot()) {
-            return back()->withInput()->with('error', 'Kamar sudah penuh (kapasitas ' . ($room->roomType?->capacity ?? 1) . ' orang).');
-        }
-
         // Nomor invoice
         $prefix = 'INV-' . date('ym') . '-';
         $last = Transaksi::where('invoice_number', 'like', $prefix . '%')->orderBy('invoice_number', 'desc')->first();
@@ -387,60 +393,61 @@ class TransactionController extends Controller
         $methodLabels = ['cash' => 'TUNAI', 'edc' => 'EDC / MESIN KARTU', 'manual_transfer' => 'TRANSFER MANUAL'];
         $senderBank = $methodLabels[$validated['payment_method']] ?? 'MANUAL';
 
-        DB::transaction(function () use ($request, $validated, $tenant, $room, $ownerId, $invoiceNumber, $senderBank, $isExistingOccupant) {
-            $transaction = Transaksi::create([
-                'owner_id' => $ownerId,
-                'penyewa_id' => $tenant->id,
-                'kamar_id' => $room->id,
-                'amount' => $validated['amount'],
-                'duration_months' => $validated['duration'],
-                'period_start_date' => now(),
-                'period_end_date' => now()->addMonths((int) $validated['duration']),
-                'invoice_number' => $invoiceNumber,
-                'reference_number' => $invoiceNumber,
-                'payment_date' => now(),
-                'due_date' => now(),
-                'status' => 'verified_by_owner',
-                'payment_method' => $validated['payment_method'],
-                'sender_bank' => $senderBank,
-                'sender_name' => $tenant->name,
-                'owner_verified_at' => now(),
-                'owner_verified_by' => $ownerId,
-                'owner_notes' => $validated['notes'] ?? null,
-                'provisional_amount' => $validated['amount'],
-                'final_amount' => $validated['amount'],
-            ]);
-
-            if ($request->hasFile('payment_proof')) {
-                $path = $request->file('payment_proof')->store('payment-proofs/' . $tenant->id, 'local');
-                BuktiBayar::create([
-                    'transaksi_id' => $transaction->id,
-                    'file_path' => $path,
-                    'file_type' => $request->file('payment_proof')->getClientMimeType(),
-                    'uploaded_by' => $ownerId,
-                    'uploaded_at' => now(),
-                    'verified_status' => 'approved',
-                    'verified_notes' => 'Dicatat oleh pemilik kos',
+        try {
+            DB::transaction(function () use ($request, $validated, $tenant, $room, $ownerId, $invoiceNumber, $senderBank) {
+                $transaction = Transaksi::create([
+                    'owner_id' => $ownerId,
+                    'penyewa_id' => $tenant->id,
+                    'kamar_id' => $room->id,
+                    'amount' => $validated['amount'],
+                    'duration_months' => $validated['duration'],
+                    'period_start_date' => now(),
+                    'period_end_date' => now()->addMonths((int) $validated['duration']),
+                    'invoice_number' => $invoiceNumber,
+                    'reference_number' => $invoiceNumber,
+                    'payment_date' => now(),
+                    'due_date' => now(),
+                    'status' => 'verified_by_owner',
+                    'payment_method' => $validated['payment_method'],
+                    'sender_bank' => $senderBank,
+                    'sender_name' => $tenant->name,
+                    'owner_verified_at' => now(),
+                    'owner_verified_by' => $ownerId,
+                    'owner_notes' => $validated['notes'] ?? null,
+                    'provisional_amount' => $validated['amount'],
+                    'final_amount' => $validated['amount'],
                 ]);
-            }
 
-            // Tempatkan penyewa ke kamar bila belum jadi penghuni.
-            if (! $isExistingOccupant) {
-                $room->occupants()->attach($tenant->id, ['check_in_date' => now()]);
-            }
-            $room->refresh();
-            $room->update([
-                'status' => $room->isFull() ? 'occupied' : 'available',
-                'lease_start_date' => $room->lease_start_date ?? now(),
-                'lease_end_date' => now()->addMonths((int) $validated['duration']),
-            ]);
+                // Penempatan lewat service bersama (cek kapasitas + reaktivasi pivot).
+                // Dijalankan SEBELUM menyimpan file bukti: bila kamar penuh, error dilempar
+                // dan transaksi di-rollback tanpa menyisakan file bukti yang terlanjur tersimpan.
+                $result = app(\App\Services\RoomAllocationService::class)->assignRoomAfterPayment($transaction);
+                if (! $result['ok']) {
+                    throw new \RuntimeException($result['error']);
+                }
 
-            \App\Services\LoggerService::log(
-                'create_transaction',
-                "Transaksi manual ({$validated['payment_method']}) untuk {$tenant->name}",
-                $transaction
-            );
-        });
+                if ($request->hasFile('payment_proof')) {
+                    $path = $request->file('payment_proof')->store('payment-proofs/' . $tenant->id, 'local');
+                    BuktiBayar::create([
+                        'transaksi_id' => $transaction->id,
+                        'file_path' => $path,
+                        'file_type' => $request->file('payment_proof')->getClientMimeType(),
+                        'uploaded_by' => $ownerId,
+                        'uploaded_at' => now(),
+                        'verified_status' => 'approved',
+                        'verified_notes' => 'Dicatat oleh pemilik kos',
+                    ]);
+                }
+
+                \App\Services\LoggerService::log(
+                    'create_transaction',
+                    "Transaksi manual ({$validated['payment_method']}) untuk {$tenant->name}",
+                    $transaction
+                );
+            });
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('owner.verifikasi-transaksi')
             ->with('success', 'Transaksi manual berhasil dicatat & penyewa ditempatkan.');

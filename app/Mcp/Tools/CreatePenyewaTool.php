@@ -3,20 +3,18 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Concerns\InteractsWithOwner;
-use App\Models\Kamar;
 use App\Models\Penyewa;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tool;
 
-#[Description('Tambah penyewa baru (data internal, tanpa akun login) dan opsional tempatkan langsung ke kamar tersedia.')]
+#[Description('Tambah penyewa baru (data internal, tanpa akun login). Penyewa baru BELUM bisa langsung ditempatkan ke kamar karena belum ada pembayaran — jika kamar_id diisi, permintaan ditolak. Untuk menempatkan, gunakan create-transaksi yang mewajibkan pembayaran.')]
 class CreatePenyewaTool extends Tool
 {
     use InteractsWithOwner;
@@ -33,9 +31,22 @@ class CreatePenyewaTool extends Tool
             'email' => ['nullable', 'email', 'max:255', 'unique:user,email'],
             'phone' => ['nullable', 'string', 'max:30'],
             'tenant_type' => ['nullable', 'in:mahasiswa,non_mahasiswa'],
-            'kamar_id' => ['nullable', Rule::exists('kamar', 'id')->where('owner_id', $ownerId)],
+            'kamar_id' => ['nullable', 'integer'],
         ]);
 
+        // Guard: penyewa yang baru dibuat belum punya pembayaran terverifikasi,
+        // sehingga tidak boleh langsung ditempatkan ke kamar. Occupancy harus
+        // selalu didahului pembayaran — lihat create-transaksi.
+        if (! empty($validated['kamar_id'])) {
+            return Response::error(
+                'Penyewa baru belum memiliki pembayaran terverifikasi, jadi belum bisa '
+                . 'ditempatkan ke kamar. Buat penyewa tanpa kamar_id, lalu gunakan '
+                . 'create-transaksi untuk mencatat pembayaran sekaligus menempatkannya.'
+            );
+        }
+
+        // Penyewa hanya didata di sini; penempatan ke kamar dilakukan lewat
+        // create-transaksi agar occupancy selalu disertai catatan pembayaran.
         $user = DB::transaction(function () use ($validated, $ownerId) {
             $email = $validated['email'] ?? ('penyewa_' . Str::lower(Str::random(10)) . '@internal.local');
 
@@ -54,24 +65,13 @@ class CreatePenyewaTool extends Tool
                 'phone' => $validated['phone'] ?? null,
             ]);
 
-            if (! empty($validated['kamar_id'])) {
-                $room = Kamar::where('owner_id', $ownerId)->with('roomType')->find($validated['kamar_id']);
-                if ($room && $room->hasAvailableSlot()) {
-                    $room->occupants()->attach($user->id, ['check_in_date' => now()]);
-                    $room->refresh();
-                    $room->update([
-                        'status' => $room->isFull() ? 'occupied' : 'available',
-                        'lease_start_date' => $room->lease_start_date ?? now(),
-                    ]);
-                }
-            }
-
             return $user;
         });
 
         return Response::json([
             'success' => true,
-            'message' => "Penyewa {$user->name} berhasil ditambahkan.",
+            'message' => "Penyewa {$user->name} berhasil ditambahkan (belum ditempatkan ke kamar). "
+                . 'Untuk menempatkan ke kamar, gunakan create-transaksi (butuh pembayaran).',
             'penyewa' => ['id' => $user->id, 'nama' => $user->name],
         ]);
     }
@@ -83,7 +83,7 @@ class CreatePenyewaTool extends Tool
             'email' => $schema->string()->description('Email (opsional). Kosongkan bila tak ada.'),
             'phone' => $schema->string()->description('Nomor HP (opsional).'),
             'tenant_type' => $schema->string()->description('Jenis: mahasiswa atau non_mahasiswa.')->enum(['mahasiswa', 'non_mahasiswa']),
-            'kamar_id' => $schema->integer()->description('ID kamar untuk menempatkan penyewa (opsional).'),
+            'kamar_id' => $schema->integer()->description('ID kamar untuk menempatkan penyewa. Catatan: penyewa baru belum bayar, jadi penempatan lewat sini akan DITOLAK — pakai create-transaksi untuk menempatkan dengan pembayaran.'),
         ];
     }
 }

@@ -97,22 +97,25 @@ class TransactionController extends Controller
             'selectedStatus' => $status,
             'search' => $search,
             'floors' => $floors,
-            'penyewaUntukJs' => \App\Models\User::where('role', 'tenant')->whereHas('tenantProfile', fn($q) => $q->where('owner_id', $ownerId))->with('currentRoom')->orderBy('name')->get()
+            'penyewaUntukJs' => \App\Models\User::where('role', 'tenant')->whereHas('tenantProfile', fn($q) => $q->where('owner_id', $ownerId))->with(['occupiedRoom', 'currentRoom'])->orderBy('name')->get()
                 ->map(fn($t) => [
                     'id'          => $t->id,
                     'name'        => $t->name,
-                    'kamar_id'     => $t->currentRoom?->id,
-                    'room_number' => $t->currentRoom?->room_number,
+                    'kamar_id'     => $t->activeRoom?->id,
+                    'room_number' => $t->activeRoom?->room_number,
                 ])->values(),
-            'kamarUntukJs' => \App\Models\Kamar::where('owner_id', $ownerId)->with(['roomType', 'occupants'])->orderBy('room_number')->get()
+            'kamarUntukJs' => \App\Models\Kamar::where('owner_id', $ownerId)->with(['roomType', 'occupants'])->withCount('occupants')->orderBy('room_number')->get()
                 ->map(fn($r) => [
                     'id'          => $r->id,
                     'number'      => $r->room_number,
                     'type'        => $r->roomType?->name ?? '',
                     'price'       => $r->roomType?->rent_per_person ?? 0,
+                    'capacity'    => $r->roomType?->capacity ?? 1,
+                    'occupants'   => $r->occupants_count ?? 0,
                     'penyewa_id'   => $r->occupants->first()?->id,
                     'tenant_name' => $r->occupants->first()?->name,
                 ])->values(),
+            'preselectPenyewa' => $request->query('penyewa'),
         ]);
     }
 

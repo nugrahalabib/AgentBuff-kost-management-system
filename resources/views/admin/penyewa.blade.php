@@ -533,7 +533,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     window.__pageTour = [
-        { element: 'a[href$="/admin/penyewa/tambah"]', popover: { title: 'Tambah Penyewa', description: 'Catat penyewa baru & langsung tempatkan ke kamar tersedia.' } },
+        { element: 'a[href$="/admin/penyewa/tambah"]', popover: { title: 'Tambah Penyewa', description: 'Catat penyewa baru. Penempatan ke kamar dilakukan lewat menu transaksi.' } },
     ];
     window.KostTour && window.KostTour.auto('admin-penyewa-v1', window.__pageTour);
 });

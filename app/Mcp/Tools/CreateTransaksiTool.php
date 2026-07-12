@@ -37,48 +37,45 @@ class CreateTransaksiTool extends Tool
         $tenant = User::findOrFail($validated['penyewa_id']);
         $room = Kamar::with('roomType')->findOrFail($validated['kamar_id']);
 
-        $isOccupant = $room->occupants()->where('user.id', $tenant->id)->exists();
-        if (! $isOccupant && ! $room->hasAvailableSlot()) {
-            return Response::error('Kamar sudah penuh.');
-        }
-
         $prefix = 'INV-' . date('ym') . '-';
         $last = Transaksi::where('invoice_number', 'like', $prefix . '%')->orderBy('invoice_number', 'desc')->first();
         $invoice = $prefix . str_pad(($last ? ((int) substr($last->invoice_number, -5)) + 1 : 1), 5, '0', STR_PAD_LEFT);
         $labels = ['cash' => 'TUNAI', 'edc' => 'EDC / MESIN KARTU', 'manual_transfer' => 'TRANSFER MANUAL'];
 
-        DB::transaction(function () use ($validated, $tenant, $room, $ownerId, $invoice, $labels, $isOccupant) {
-            Transaksi::create([
-                'owner_id' => $ownerId,
-                'penyewa_id' => $tenant->id,
-                'kamar_id' => $room->id,
-                'amount' => $validated['amount'],
-                'duration_months' => $validated['duration'],
-                'period_start_date' => now(),
-                'period_end_date' => now()->addMonths((int) $validated['duration']),
-                'invoice_number' => $invoice,
-                'reference_number' => $invoice,
-                'payment_date' => now(),
-                'due_date' => now(),
-                'status' => 'verified_by_owner',
-                'payment_method' => $validated['payment_method'],
-                'sender_bank' => $labels[$validated['payment_method']] ?? 'MANUAL',
-                'sender_name' => $tenant->name,
-                'owner_verified_at' => now(),
-                'owner_verified_by' => $ownerId,
-                'provisional_amount' => $validated['amount'],
-                'final_amount' => $validated['amount'],
-            ]);
+        try {
+            DB::transaction(function () use ($validated, $tenant, $room, $ownerId, $invoice, $labels) {
+                $transaction = Transaksi::create([
+                    'owner_id' => $ownerId,
+                    'penyewa_id' => $tenant->id,
+                    'kamar_id' => $room->id,
+                    'amount' => $validated['amount'],
+                    'duration_months' => $validated['duration'],
+                    'period_start_date' => now(),
+                    'period_end_date' => now()->addMonths((int) $validated['duration']),
+                    'invoice_number' => $invoice,
+                    'reference_number' => $invoice,
+                    'payment_date' => now(),
+                    'due_date' => now(),
+                    'status' => 'verified_by_owner',
+                    'payment_method' => $validated['payment_method'],
+                    'sender_bank' => $labels[$validated['payment_method']] ?? 'MANUAL',
+                    'sender_name' => $tenant->name,
+                    'owner_verified_at' => now(),
+                    'owner_verified_by' => $ownerId,
+                    'provisional_amount' => $validated['amount'],
+                    'final_amount' => $validated['amount'],
+                ]);
 
-            if (! $isOccupant) {
-                $room->occupants()->attach($tenant->id, ['check_in_date' => now()]);
-            }
-            $room->refresh();
-            $room->update([
-                'status' => $room->isFull() ? 'occupied' : 'available',
-                'lease_start_date' => $room->lease_start_date ?? now(),
-            ]);
-        });
+                // Penempatan lewat service bersama (cek kapasitas + reaktivasi pivot).
+                // Kamar penuh -> lempar error -> seluruh transaksi ter-rollback.
+                $result = app(\App\Services\RoomAllocationService::class)->assignRoomAfterPayment($transaction);
+                if (! $result['ok']) {
+                    throw new \RuntimeException($result['error']);
+                }
+            });
+        } catch (\RuntimeException $e) {
+            return Response::error($e->getMessage());
+        }
 
         return Response::json([
             'success' => true,

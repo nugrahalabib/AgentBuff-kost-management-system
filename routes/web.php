@@ -85,6 +85,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/penyewa/tambah', [OwnerPenyewaController::class, 'create'])->name('penyewa.create');
             Route::post('/penyewa/tambah', [OwnerPenyewaController::class, 'store'])->name('penyewa.store');
             Route::get('/penyewa/{user}', [OwnerPenyewaController::class, 'show'])->name('penyewa.show');
+            Route::post('/penyewa/{user}/checkout', [OwnerPenyewaController::class, 'checkout'])->name('penyewa.checkout');
 
             // 4. Laporan (cashflow + generate laporan sendiri)
             Route::get('/laporan', [OwnerLaporanController::class, 'index'])->name('laporan');

@@ -23,8 +23,10 @@ use Laravel\Mcp\Server\Attributes\Version;
     'Server MCP untuk manajemen kos AgentBuff KostCloud. Semua tool otomatis di-scope ' .
     'ke kos milik pemilik bearer token (owner/admin) — Anda hanya bisa melihat & mengubah ' .
     'data kos tersebut. Alur umum: pakai list-tipe-kamar & list-kamar sebelum create-kamar; ' .
-    'pakai list-penyewa & list-kamar sebelum create-transaksi. dashboard-summary memberi ' .
-    'ringkasan cepat. Nilai uang dalam Rupiah.'
+    'pakai list-penyewa & list-kamar sebelum create-transaksi. create-penyewa hanya mendata ' .
+    'penyewa; penyewa baru tidak bisa langsung ditempatkan ke kamar sebelum ada pembayaran, ' .
+    'jadi penempatan dilakukan lewat create-transaksi yang mewajibkan pembayaran. ' .
+    'dashboard-summary memberi ringkasan cepat. Nilai uang dalam Rupiah.'
 )]
 class KostCloudServer extends Server
 {

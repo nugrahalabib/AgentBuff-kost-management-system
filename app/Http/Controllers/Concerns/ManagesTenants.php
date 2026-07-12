@@ -9,13 +9,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
- * Logika bersama untuk menambahkan PENYEWA sebagai data internal (tanpa akun login)
- * dan menempatkannya ke kamar yang tersedia. Dipakai owner (PemilikKos) & admin —
- * owner_id ditentukan lewat User::ownerId() (owner → dirinya, admin → owner-nya),
- * sehingga data yang dibuat admin & owner selalu menyasar tenant/kos yang sama.
+ * Logika bersama untuk menambahkan PENYEWA sebagai data internal (tanpa akun login).
+ * Dipakai owner (PemilikKos) & admin — owner_id ditentukan lewat User::ownerId()
+ * (owner → dirinya, admin → owner-nya), sehingga data yang dibuat admin & owner
+ * selalu menyasar tenant/kos yang sama.
+ *
+ * Penyewa TIDAK ditempatkan ke kamar di sini: penyewa baru belum punya pembayaran,
+ * dan occupancy harus selalu didahului pembayaran. Penempatan dilakukan lewat
+ * pencatatan transaksi (TransactionController / create-transaksi MCP).
  */
 trait ManagesTenants
 {
@@ -51,12 +55,22 @@ trait ManagesTenants
             'phone'       => 'nullable|string|max:30',
             'tenant_type' => 'nullable|in:mahasiswa,non_mahasiswa',
             'address'     => 'nullable|string|max:500',
-            'kamar_id'    => ['nullable', Rule::exists('kamar', 'id')->where('owner_id', $ownerId)],
+            'kamar_id'    => ['nullable', 'integer'],
         ], [
             'name.required'  => 'Nama penyewa wajib diisi.',
             'email.unique'   => 'Email tersebut sudah dipakai.',
-            'kamar_id.exists' => 'Kamar tidak ditemukan di kos Anda.',
         ]);
+
+        // Guard: penyewa baru belum punya pembayaran terverifikasi, jadi tidak boleh
+        // langsung ditempatkan ke kamar. Occupancy harus selalu didahului pembayaran —
+        // penempatan dilakukan lewat pencatatan transaksi.
+        if (! empty($validated['kamar_id'])) {
+            throw ValidationException::withMessages([
+                'kamar_id' => 'Penyewa baru belum memiliki pembayaran, jadi belum bisa langsung '
+                    . 'ditempatkan ke kamar. Simpan penyewa dulu, lalu catat pembayaran di menu '
+                    . 'transaksi untuk menempatkannya.',
+            ]);
+        }
 
         return DB::transaction(function () use ($validated, $ownerId) {
             // Email placeholder non-login bila tidak diisi (kolom UNIQUE NOT NULL).
@@ -78,19 +92,6 @@ trait ManagesTenants
                 'phone'       => $validated['phone'] ?? null,
                 'address'     => $validated['address'] ?? null,
             ]);
-
-            // Penempatan ke kamar (opsional).
-            if (! empty($validated['kamar_id'])) {
-                $room = Kamar::where('owner_id', $ownerId)->with('roomType')->find($validated['kamar_id']);
-                if ($room && $room->hasAvailableSlot()) {
-                    $room->occupants()->attach($user->id, ['check_in_date' => now()]);
-                    $room->refresh();
-                    $room->update([
-                        'status'            => $room->isFull() ? 'occupied' : 'available',
-                        'lease_start_date'  => $room->lease_start_date ?? now(),
-                    ]);
-                }
-            }
 
             \App\Services\LoggerService::log('create', "Tambah penyewa {$user->name}", $user);
 

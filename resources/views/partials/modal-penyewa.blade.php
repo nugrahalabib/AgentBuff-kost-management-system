@@ -35,19 +35,10 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Tempatkan ke Kamar <span class="text-gray-400">(opsional)</span></label>
-                    <select name="kamar_id" class="w-full px-4 py-2.5 rounded-xl border {{ $errors->has('kamar_id') ? 'border-red-500' : 'border-gray-300' }} focus:ring-2 focus:ring-emerald-500">
-                        <option value="">-- Belum ditempatkan --</option>
-                        @foreach($rooms as $r)
-                            @php
-                                $cap = $r->roomType->capacity ?? 1;
-                                $occ = $r->occupants_count ?? 0;
-                                $lbl = 'Kamar ' . $r->room_number . ' — ' . ($r->roomType->name ?? '-') . ($cap > 1 ? " ({$occ}/{$cap} slot terisi)" : '');
-                            @endphp
-                            <option value="{{ $r->id }}" {{ old('kamar_id') == $r->id ? 'selected' : '' }}>{{ $lbl }}</option>
-                        @endforeach
-                    </select>
-                    @if($rooms->isEmpty())<p class="text-amber-600 text-xs mt-1">Tak ada kamar kosong.</p>@endif
+                    <p class="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
+                        Penyewa baru belum bisa langsung ditempatkan ke kamar. Setelah disimpan, catat
+                        pembayaran di menu <span class="font-semibold">Transaksi</span> untuk menempatkannya ke kamar.
+                    </p>
                 </div>
             </div>
             <div>

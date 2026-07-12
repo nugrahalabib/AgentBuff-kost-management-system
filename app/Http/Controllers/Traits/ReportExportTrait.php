@@ -160,7 +160,7 @@ trait ReportExportTrait
 
             // Harga (Price)
             $price = $room->roomType->capacity > 1
-                ? ($room->rent_per_person ?? ($room->price_per_month / 2))
+                ? ($room->rent_per_person ?? ($room->price_per_month / ($room->roomType->capacity ?? 1)))
                 : ($room->price_per_month ?? 0);
 
             $sheet->setCellValue('G' . $row, $price);
@@ -293,7 +293,7 @@ trait ReportExportTrait
             $sheet->setCellValue('D' . $row, $room ? ($room->roomType->name ?? '-') : '-');
 
             $price = $room ? ($room->roomType->capacity > 1
-                ? ($room->rent_per_person ?? ($room->price_per_month / 2))
+                ? ($room->rent_per_person ?? ($room->price_per_month / ($room->roomType->capacity ?? 1)))
                 : ($room->price_per_month ?? 0)) : 0;
 
             $sheet->setCellValue('E' . $row, $price);

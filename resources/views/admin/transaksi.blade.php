@@ -945,10 +945,26 @@
                     return this.tenants.filter(t => t.name.toLowerCase().includes(q));
                 },
 
+                get selectedTenant() {
+                    return this.tenants.find(t => t.id == this.selectedTenantId) || null;
+                },
+                // Penyewa sudah punya kamar aktif -> perpanjangan (dikunci ke kamarnya).
+                get isExtension() {
+                    return !!(this.selectedTenant && this.selectedTenant.kamar_id);
+                },
                 get filteredRooms() {
-                    if (!this.roomSearch) return this.rooms;
+                    const t = this.selectedTenant;
+                    let base;
+                    if (!t) {
+                        base = [];                                              // pilih penyewa dulu
+                    } else if (t.kamar_id) {
+                        base = this.rooms.filter(r => r.id == t.kamar_id);      // perpanjangan: kamarnya saja
+                    } else {
+                        base = this.rooms.filter(r => (r.occupants ?? 0) < (r.capacity ?? 1)); // slot kosong
+                    }
+                    if (!this.roomSearch) return base;
                     const q = this.roomSearch.toLowerCase();
-                    return this.rooms.filter(r =>
+                    return base.filter(r =>
                         r.number.toLowerCase().includes(q) ||
                         r.type.toLowerCase().includes(q)
                     );
@@ -958,10 +974,16 @@
                     this.selectedTenantId = tenant.id;
                     this.tenantSearch = tenant.name;
                     this.showTenantDropdown = false;
-                    // Auto-pilih kamar milik penyewa ini
-                    if (tenant.kamar_id && !this.selectedRoomId) {
+                    if (tenant.kamar_id) {
+                        // Perpanjangan: auto-pilih & kunci ke kamar penyewa.
                         const room = this.rooms.find(r => r.id == tenant.kamar_id);
                         if (room) this.selectRoom(room);
+                    } else {
+                        // Belum punya kamar: reset agar pilih dari kamar berslot kosong.
+                        this.selectedRoomId = '';
+                        this.roomSearch = '';
+                        this.pricePerMonth = 0;
+                        this.updateAmount();
                     }
                 },
 
@@ -1008,6 +1030,16 @@
                     }
                     this.duration = oldDuration;
                     this.amount = oldAmount > 0 ? oldAmount : (this.pricePerMonth * this.duration);
+
+                    // Pre-select penyewa dari ?penyewa= (tombol "Tempatkan ke Kamar") + buka modal.
+                    const preselect = '{{ $preselectPenyewa ?? '' }}';
+                    if (preselect && !this.selectedTenantId) {
+                        const t = this.tenants.find(t => t.id == preselect);
+                        if (t) {
+                            this.selectTenant(t);
+                            document.getElementById('manual-modal')?.classList.remove('hidden');
+                        }
+                    }
 
                     // Buka modal otomatis jika ada error validasi
                     @if($errors->hasAny(['penyewa_id', 'kamar_id', 'amount', 'duration', 'payment_method', 'payment_proof', 'notes']))

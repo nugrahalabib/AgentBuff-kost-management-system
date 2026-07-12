@@ -56,10 +56,10 @@ class TipeKamar extends Model
     public function getRentPerPersonAttribute()
     {
         $capacity = $this->capacity ?? 1;
-        if ($capacity > 1) {
-            return $this->price_per_month / 2;
-        }
-        return $this->price_per_month;
+
+        return $capacity > 1
+            ? $this->price_per_month / $capacity
+            : $this->price_per_month;
     }
 
     /**

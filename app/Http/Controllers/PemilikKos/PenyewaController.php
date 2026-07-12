@@ -236,7 +236,7 @@ class PenyewaController extends Controller
             abort(404);
         }
 
-        $user->load(['tenantProfile', 'tenantTransactions', 'occupiedRoom.roomType', 'currentRoom.roomType']);
+        $user->load(['tenantProfile', 'tenantTransactions.paymentProofs', 'occupiedRoom.roomType', 'currentRoom.roomType']);
 
         $ownerId = Auth::id();
 
@@ -259,5 +259,63 @@ class PenyewaController extends Controller
         return view('pemilik-kos.biodata-penyewa', [
             'penyewa' => $user,
         ]);
+    }
+
+    /**
+     * Checkout penyewa dari kamarnya (soft-remove: set check_out_date pada pivot,
+     * histori tetap). Hanya bila masa sewa (transaksi verified terakhir) berakhir.
+     */
+    public function checkout(User $user)
+    {
+        if ($user->role !== 'tenant') {
+            abort(404);
+        }
+
+        $ownerId = Auth::id();
+
+        // Kamar aktif penyewa, dipastikan milik kos ini.
+        $occupiedRoom = $user->occupiedRoom()->where('owner_id', $ownerId)->first();
+        if (! $occupiedRoom) {
+            return back()->with('error', 'Penyewa tidak memiliki kamar aktif di kos Anda.');
+        }
+
+        // Hanya boleh checkout setelah masa sewa berakhir.
+        $latest = $user->tenantTransactions()
+            ->where('status', 'verified_by_owner')
+            ->orderBy('period_end_date', 'desc')
+            ->first();
+        if ($latest && $latest->period_end_date > now()) {
+            $endDate = \Carbon\Carbon::parse($latest->period_end_date)->format('d M Y');
+
+            return back()->with('error', "Masa sewa masih aktif sampai {$endDate}. Checkout hanya bisa dilakukan setelah masa sewa berakhir.");
+        }
+
+        // Soft-remove pada pivot (sumber kebenaran okupansi).
+        \Illuminate\Support\Facades\DB::table('riwayat_penghuni_kamar')
+            ->where('user_id', $user->id)
+            ->where('kamar_id', $occupiedRoom->id)
+            ->whereNull('check_out_date')
+            ->update(['check_out_date' => now()]);
+
+        // Recompute status kamar dari pivot.
+        $room = \App\Models\Kamar::find($occupiedRoom->id);
+        if ($room) {
+            if ($room->current_tenant_id == $user->id) {
+                $other = $room->occupants()->where('user.id', '!=', $user->id)->first();
+                $room->current_tenant_id = $other?->id;
+            }
+            $room->status = $room->occupants()->count() > 0
+                ? ($room->isFull() ? 'occupied' : 'available')
+                : 'available';
+            $room->save();
+        }
+
+        \App\Services\LoggerService::log(
+            'checkout_tenant',
+            "Checkout penyewa {$user->name} dari Kamar {$occupiedRoom->room_number}",
+            $user
+        );
+
+        return back()->with('success', "Penyewa {$user->name} berhasil checkout dari Kamar {$occupiedRoom->room_number}.");
     }
 }

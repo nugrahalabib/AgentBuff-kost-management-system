@@ -361,7 +361,7 @@
                         </td>
                         <td class="text-center">
                             Rp
-                            {{ number_format($room->roomType->capacity > 1 ? ($room->rent_per_person ?? ($room->price_per_month / 2)) : ($room->price_per_month ?? 0), 0, ',', '.') }}
+                            {{ number_format($room->roomType->capacity > 1 ? ($room->rent_per_person ?? ($room->price_per_month / ($room->roomType->capacity ?? 1))) : ($room->price_per_month ?? 0), 0, ',', '.') }}
                             @if($room->roomType->capacity > 1)
                                 <div style="font-size: 8pt; color: #666; margin-top: 2px;">/ org / bln</div>
                             @endif
@@ -534,7 +534,7 @@
                             @php
                                 $room = $tenant->activeRoom;
                                 $price = $room ? ($room->roomType->capacity > 1
-                                    ? ($room->rent_per_person ?? ($room->price_per_month / 2))
+                                    ? ($room->rent_per_person ?? ($room->price_per_month / ($room->roomType->capacity ?? 1)))
                                     : ($room->price_per_month ?? 0)) : 0;
                             @endphp
                             @if($price > 0)

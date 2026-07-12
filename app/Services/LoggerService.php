@@ -87,16 +87,13 @@ class LoggerService
                 $ownerId = $model->owner_id;
             }
              
-            // Fallback: Get from Admin Profile
+            // Fallback: owner dari profil admin (admin bekerja untuk satu kos).
             if (!$ownerId) {
                 $ownerId = $user->adminProfile?->owner_id ?? null;
             }
 
-            // Fallback terakhir: sistem single-owner → pakai owner satu-satunya.
-            if (!$ownerId) {
-                $ownerId = \App\Models\User::where('role', 'owner')->value('id');
-            }
-
+            // Multi-tenant: TIDAK ada fallback "owner satu-satunya" — menebak owner
+            // berisiko salah-atribusi antar kos. Bila owner tak ketemu, lewati log.
             // CRITICAL: kalau owner_id tetap tidak ketemu, JANGAN insert (kolom NOT NULL).
             // Lewati audit log secara diam-diam agar tidak menggagalkan operasi utama
             // (mis. konfirmasi pembayaran penyewa) — cukup catat ke log sistem.

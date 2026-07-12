@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Storage;
  * pengelola kos (owner/admin). Direlokasi dari controller Penyewa yang dihapus
  * saat reservasi online ditiadakan.
  *
- * TODO(multi-tenant): setelah kolom owner_id ditambahkan ke tabel penyewa,
- * batasi owner agar hanya bisa melihat berkas milik tenant/transaksi kos-nya.
+ * Akses ter-scope per-kos: owner/admin hanya bisa melihat berkas milik kos-nya
+ * (dicek lewat transaksi.owner_id / penyewa.owner_id).
  */
 class DocumentController extends Controller
 {
@@ -30,8 +30,9 @@ class DocumentController extends Controller
 
         $proof = BuktiBayar::with('transaction')->findOrFail($proofId);
 
-        // Owner hanya boleh melihat bukti bayar pada tenant/kos miliknya.
-        if ($user->role === 'owner' && $proof->transaction && $proof->transaction->owner_id !== $user->id) {
+        // Owner & admin hanya boleh melihat bukti bayar pada kos-nya sendiri.
+        $scopeOwnerId = $user->role === 'owner' ? $user->id : $user->adminProfile?->owner_id;
+        if ($proof->transaction && $proof->transaction->owner_id !== $scopeOwnerId) {
             abort(403);
         }
 
@@ -59,6 +60,13 @@ class DocumentController extends Controller
         }
 
         $tenantUser = User::with('tenantProfile')->findOrFail($userId);
+
+        // Owner & admin hanya boleh melihat dokumen penyewa di kos-nya sendiri.
+        $scopeOwnerId = $viewer->role === 'owner' ? $viewer->id : $viewer->adminProfile?->owner_id;
+        if (($tenantUser->tenantProfile?->owner_id) !== $scopeOwnerId) {
+            abort(403);
+        }
+
         $documents = $tenantUser->tenantProfile?->documents ?? [];
         $path = $documents[$type] ?? null;
         if (! $path) {

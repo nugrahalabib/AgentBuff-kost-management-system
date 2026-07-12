@@ -83,10 +83,10 @@ class Kamar extends Model
     public function getRentPerPersonAttribute()
     {
         $capacity = $this->roomType->capacity ?? 1;
-        if ($capacity > 1) {
-            return $this->price_per_month / 2; // Fixed logic as per user request: "dibagi dua"
-        }
-        return $this->price_per_month;
+
+        return $capacity > 1
+            ? $this->price_per_month / $capacity
+            : $this->price_per_month;
     }
 
     /**

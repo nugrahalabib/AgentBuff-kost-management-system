@@ -32,14 +32,18 @@ class CheckDailyReminders extends Command
     {
         $this->info('Starting daily reminder check...');
 
-        $owner = User::where('role', 'owner')->first();
-        if (!$owner) {
+        $owners = User::where('role', 'owner')->get();
+        if ($owners->isEmpty()) {
             $this->error('No owner found.');
             return;
         }
 
-        $this->checkExpiringContracts($owner);
-        $this->checkEmptyRooms($owner);
+        // Multi-tenant: jalankan pengecekan per-kos agar notifikasi & data
+        // ter-scope ke owner masing-masing (tidak tercampur antar kos).
+        foreach ($owners as $owner) {
+            $this->checkExpiringContracts($owner);
+            $this->checkEmptyRooms($owner);
+        }
 
         $this->info('Daily reminder check completed.');
     }
@@ -53,7 +57,8 @@ class CheckDailyReminders extends Command
             $targetDate = $today->copy()->addDays($days);
             
             // Find active transactions expiring on target date
-            $expiringTransactions = Transaksi::whereDate('period_end_date', $targetDate)
+            $expiringTransactions = Transaksi::where('owner_id', $owner->id)
+                ->whereDate('period_end_date', $targetDate)
                 ->where('status', 'verified_by_owner')
                 ->with(['tenant', 'room'])
                 ->get();
@@ -88,7 +93,8 @@ class CheckDailyReminders extends Command
     {
         // Find rooms with NO current occupants and status is 'available'
         // 'doesntHave occupants' ensures strictly no active tenants
-        $emptyRooms = Kamar::doesntHave('occupants')
+        $emptyRooms = Kamar::where('owner_id', $owner->id)
+            ->doesntHave('occupants')
             ->where('status', 'available')
             ->get();
 
