@@ -292,6 +292,10 @@ class TransactionController extends Controller
         ];
         $senderBank = $methodLabels[$validated['payment_method']] ?? 'MANUAL';
 
+        // Periode sewa dengan chaining (perpanjangan menyambung dari akhir sewa aktif).
+        $period = app(\App\Services\RoomAllocationService::class)
+            ->computeRentalPeriod($tenant->id, (int) $validated['duration']);
+
         // Create Transaction
         $transaction = Transaksi::create([
             'owner_id' => $owner ? $owner->id : 1, // Fallback if no owner
@@ -299,8 +303,8 @@ class TransactionController extends Controller
             'kamar_id' => $room->id,
             'amount' => $validated['amount'],
             'duration_months' => $validated['duration'],
-            'period_start_date' => now(),
-            'period_end_date' => now()->addMonths((int) $validated['duration']),
+            'period_start_date' => $period['start'],
+            'period_end_date' => $period['end'],
             'invoice_number' => $invoiceNumber,
             'reference_number' => $invoiceNumber, // Use invoice as ref
             'payment_date' => now(),

@@ -150,6 +150,12 @@ class User extends Authenticatable
      * Get room occupied by this user via riwayat_penghuni_kamar pivot table
      * This is the PRIMARY way to check if tenant has a room for multi-tenant support
      */
+    /** Email placeholder internal (penyewa tanpa email asli) — jangan ditampilkan. */
+    public function hasPlaceholderEmail(): bool
+    {
+        return str_ends_with((string) $this->email, '@internal.local');
+    }
+
     public function occupiedRoom()
     {
         return $this->belongsToMany(Kamar::class, 'riwayat_penghuni_kamar', 'user_id', 'kamar_id')

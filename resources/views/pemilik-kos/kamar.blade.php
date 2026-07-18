@@ -148,7 +148,7 @@
                     <a href="{{ route('owner.kamar', array_merge(request()->except(['floor', 'page']), ['floor' => null])) }}" class="px-5 py-2 rounded-xl text-sm font-bold transition {{ !$selectedFloor ? 'bg-emerald-800 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:text-emerald-700' }}">
                         SEMUA LANTAI
                     </a>
-                    @for ($i = 1; $i <= 4; $i++)
+                    @for ($i = 1; $i <= $floorCount; $i++)
                         <a href="{{ route('owner.kamar', array_merge(request()->except(['floor', 'page']), ['floor' => $i])) }}" class="px-5 py-2 rounded-xl text-sm font-medium transition {{ $selectedFloor == $i ? 'bg-emerald-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:text-emerald-700' }}">
                             Lantai {{ $i }}
                         </a>

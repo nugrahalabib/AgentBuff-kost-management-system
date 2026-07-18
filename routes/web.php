@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\PublicBiodataController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\McpTokenController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
@@ -26,6 +27,10 @@ Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 
 // Sitemap XML untuk mesin pencari (Google, Bing)
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+
+// Form biodata publik untuk penyewa (TANPA login; token pada URL = otorisasi).
+Route::get('/biodata/{token}', [PublicBiodataController::class, 'edit'])->name('public.biodata.edit')->middleware('throttle:60,1');
+Route::post('/biodata/{token}', [PublicBiodataController::class, 'update'])->name('public.biodata.update')->middleware('throttle:20,1');
 
 // Middleware untuk user yang sudah login
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -86,6 +91,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/penyewa/tambah', [OwnerPenyewaController::class, 'store'])->name('penyewa.store');
             Route::get('/penyewa/{user}', [OwnerPenyewaController::class, 'show'])->name('penyewa.show');
             Route::post('/penyewa/{user}/checkout', [OwnerPenyewaController::class, 'checkout'])->name('penyewa.checkout');
+            Route::delete('/penyewa/{user}', [OwnerPenyewaController::class, 'destroy'])->name('penyewa.destroy');
+            Route::post('/penyewa/{user}/biodata-link', [OwnerPenyewaController::class, 'generateBiodataLink'])->name('penyewa.biodata-link');
 
             // 4. Laporan (cashflow + generate laporan sendiri)
             Route::get('/laporan', [OwnerLaporanController::class, 'index'])->name('laporan');
@@ -117,9 +124,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             // 6. Pengaturan
             Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
-            Route::post('/settings/business', [SettingsController::class, 'updateBusinessSettings'])->name('settings.business');
-            Route::post('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
-            Route::post('/settings/password', [SettingsController::class, 'changePassword'])->name('settings.password');
+            // Simpan semua pengaturan lewat updateAll (master save) + updateBankSettings.
             Route::post('/settings/bank', [SettingsController::class, 'updateBankSettings'])->name('settings.bank');
             Route::post('/settings/update-all', [SettingsController::class, 'updateAll'])->name('settings.update-all');
 
@@ -163,6 +168,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/penyewa/{user}/verify', [AdminPenyewaController::class, 'verify'])->name('penyewa.verify');
         Route::post('/penyewa/{user}/reminder', [AdminPenyewaController::class, 'sendReminder'])->name('penyewa.reminder');
         Route::post('/penyewa/{user}/checkout', [AdminPenyewaController::class, 'checkout'])->name('penyewa.checkout');
+        Route::delete('/penyewa/{user}', [AdminPenyewaController::class, 'destroy'])->name('penyewa.destroy');
+        Route::post('/penyewa/{user}/biodata-link', [AdminPenyewaController::class, 'generateBiodataLink'])->name('penyewa.biodata-link');
 
         // Detail Penyewa
         Route::get('/detail-penyewa', function () {
@@ -200,11 +207,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/notifikasi/category/{category}', [AdminNotificationController::class, 'byCategory'])->name('notifikasi.category');
         Route::post('/notifikasi/{notification}/read', [AdminNotificationController::class, 'markAsRead'])->name('notifikasi.read');
         Route::post('/notifikasi/{notification}/archive', [AdminNotificationController::class, 'archive'])->name('notifikasi.archive');
-
-        // MCP / AI Agent (bearer token)
-        Route::get('/mcp', [McpTokenController::class, 'index'])->name('mcp');
-        Route::post('/mcp/token', [McpTokenController::class, 'generate'])->name('mcp.generate');
-        Route::delete('/mcp/token/{id}', [McpTokenController::class, 'revoke'])->name('mcp.revoke');
     });
 });
 

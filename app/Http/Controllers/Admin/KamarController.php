@@ -185,7 +185,7 @@ class KamarController extends Controller
     {
         $validated = $request->validate([
             'room_number' => 'required|integer|min:1|unique:kamar,room_number',
-            'floor_number' => 'required|numeric|min:1|max:4',
+            'floor_number' => 'required|numeric|min:1|max:20',
             'tipe_kamar_id' => 'required|exists:tipe_kamar,id',
             'price_per_month' => 'required|numeric|min:0',
             'status' => 'required|in:available,maintenance',
@@ -242,7 +242,9 @@ class KamarController extends Controller
         // Notify Owner if status changed to Maintenance
         if ($validated['status'] === 'maintenance' && $oldStatus !== 'maintenance') {
             \App\Models\Notification::create([
-                'user_id' => $room->owner_id ?? 1, // Fallback to 1 if no owner assigned
+                // Selalu tuju owner kos ini. Fallback ke owner admin yang bertindak
+                // (bukan hardcode id 1) agar notifikasi tak bocor ke user lain.
+                'user_id' => $room->owner_id ?? auth()->user()->ownerId(),
                 'type' => 'room_maintenance',
                 'category' => 'system',
                 'title' => 'Kamar Perlu Perbaikan',
@@ -256,7 +258,7 @@ class KamarController extends Controller
         // Notify Owner if status changed from Maintenance to Available (Fixed)
         elseif ($validated['status'] === 'available' && $oldStatus === 'maintenance') {
              \App\Models\Notification::create([
-                'user_id' => $room->owner_id ?? 1,
+                'user_id' => $room->owner_id ?? auth()->user()->ownerId(),
                 'type' => 'info',
                 'category' => 'system',
                 'title' => 'Perbaikan Selesai',

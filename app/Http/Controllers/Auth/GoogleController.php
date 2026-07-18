@@ -54,16 +54,25 @@ class GoogleController extends Controller
             }
             $user->save();
         } else {
-            // Akun baru via Google selalu berperan 'tenant' (tidak pernah admin/owner).
+            // Akun baru via Google → OWNER (pemilik kos), konsisten dengan pendaftaran
+            // publik (RegisteredUserController). Penyewa bukan akun; admin dibuat oleh
+            // owner. Role 'tenant' sudah tidak dipakai untuk login.
             $user = User::create([
                 'name' => $googleUser->getName() ?: Str::before($email, '@'),
                 'email' => $email,
                 'google_id' => $googleUser->getId(),
-                'role' => 'tenant',
+                'role' => 'owner',
+                'status' => 'active',
                 // Password acak — akun Google tidak login pakai password,
                 // tapi kolomnya tetap terisi agar tak perlu ubah skema.
                 'password' => Hash::make(Str::random(40)),
                 'email_verified_at' => now(),
+            ]);
+
+            // Profil/pengaturan kos awal (sama seperti pendaftaran manual).
+            \App\Models\PemilikKos::create([
+                'owner_id' => $user->id,
+                'boarding_house_name' => 'Kos ' . $user->name,
             ]);
         }
 

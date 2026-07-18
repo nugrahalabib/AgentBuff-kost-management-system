@@ -58,10 +58,9 @@
                         class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition {{ $errors->has('floor_number') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300' }}"
                         required>
                         <option value="">-- Pilih Lantai --</option>
-                        <option value="1" {{ old('floor_number') == '1' ? 'selected' : '' }}>Lantai 1</option>
-                        <option value="2" {{ old('floor_number') == '2' ? 'selected' : '' }}>Lantai 2</option>
-                        <option value="3" {{ old('floor_number') == '3' ? 'selected' : '' }}>Lantai 3</option>
-                        <option value="4" {{ old('floor_number') == '4' ? 'selected' : '' }}>Lantai 4</option>
+                        @for($i = 1; $i <= $floorCount; $i++)
+                            <option value="{{ $i }}" {{ old('floor_number') == $i ? 'selected' : '' }}>Lantai {{ $i }}</option>
+                        @endfor
                     </select>
                     @error('floor_number')
                         <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
@@ -133,21 +132,6 @@
                     <p class="text-xs text-gray-500 mt-2">Pilih status awal kamar. Kamar tidak bisa langsung "Terisi" saat ditambahkan.</p>
                 </div>
 
-                <!-- Notes -->
-                <div>
-                    <label for="notes" class="block text-sm font-bold text-gray-700 mb-2">
-                        Catatan Tambahan <span class="text-gray-400">(Opsional)</span>
-                    </label>
-                    <textarea 
-                        id="notes" 
-                        name="notes" 
-                        rows="3"
-                        placeholder="Contoh: Kamar dengan jendela besar, dekat tangga, etc."
-                        class="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition {{ $errors->has('notes') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300' }}">{{ old('notes') }}</textarea>
-                    @error('notes')
-                        <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
-                    @enderror
-                </div>
 
                 <!-- Tombol Aksi -->
                 <div class="flex gap-3 pt-4 border-t border-gray-100">
@@ -199,7 +183,7 @@
             const roomNumber = this.value;
             if (roomNumber && roomNumber.length >= 1) {
                 const floor = roomNumber.charAt(0);
-                if (floor >= '1' && floor <= '4') {
+                if (floor >= '1' && Number(floor) <= {{ $floorCount }}) {
                     document.getElementById('floor_number').value = floor;
                 }
             }

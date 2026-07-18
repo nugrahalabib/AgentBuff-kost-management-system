@@ -152,7 +152,7 @@
                     <a href="{{ route('admin.kamar', array_merge(request()->except(['floor', 'page']), ['floor' => null])) }}" class="px-5 py-2 rounded-xl text-sm font-bold transition {{ !$selectedFloor ? 'bg-emerald-800 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:text-emerald-700' }}">
                         SEMUA LANTAI
                     </a>
-                    @for ($i = 1; $i <= 4; $i++)
+                    @for ($i = 1; $i <= $floorCount; $i++)
                         <a href="{{ route('admin.kamar', array_merge(request()->except(['floor', 'page']), ['floor' => $i])) }}" class="px-5 py-2 rounded-xl text-sm font-medium transition {{ $selectedFloor == $i ? 'bg-emerald-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:text-emerald-700' }}">
                             Lantai {{ $i }}
                         </a>
@@ -739,10 +739,9 @@
                                 class="w-full px-4 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition {{ $errors->has('floor_number') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300' }}"
                                 required>
                                 <option value="">-- Pilih Lantai --</option>
-                                <option value="1" {{ old('floor_number') == '1' ? 'selected' : '' }}>Lantai 1</option>
-                                <option value="2" {{ old('floor_number') == '2' ? 'selected' : '' }}>Lantai 2</option>
-                                <option value="3" {{ old('floor_number') == '3' ? 'selected' : '' }}>Lantai 3</option>
-                                <option value="4" {{ old('floor_number') == '4' ? 'selected' : '' }}>Lantai 4</option>
+                                @for($i = 1; $i <= $floorCount; $i++)
+                                    <option value="{{ $i }}" {{ old('floor_number') == $i ? 'selected' : '' }}>Lantai {{ $i }}</option>
+                                @endfor
                             </select>
                             @error('floor_number')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
@@ -814,18 +813,6 @@
                             @enderror
                         </div>
 
-                         <!-- Notes -->
-                        <div>
-                            <label for="notes" class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                                Catatan (Opsional)
-                            </label>
-                            <textarea 
-                                id="notes" 
-                                name="notes" 
-                                rows="2"
-                                placeholder="Ket.: Dekat tangga, jendela besar..."
-                                class="w-full px-4 py-2.5 rounded-xl border text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition {{ $errors->has('notes') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300' }}">{{ old('notes') }}</textarea>
-                        </div>
 
                     </form>
                 </div>
@@ -883,7 +870,7 @@
             const roomNumber = this.value;
             if (roomNumber && roomNumber.length >= 1) {
                 const floor = roomNumber.charAt(0);
-                if (floor >= '1' && floor <= '4') {
+                if (floor >= '1' && Number(floor) <= {{ $floorCount }}) {
                     document.getElementById('floor_number').value = floor;
                 }
             }

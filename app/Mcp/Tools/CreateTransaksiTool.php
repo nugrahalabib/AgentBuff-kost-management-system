@@ -44,14 +44,18 @@ class CreateTransaksiTool extends Tool
 
         try {
             DB::transaction(function () use ($validated, $tenant, $room, $ownerId, $invoice, $labels) {
+                // Periode sewa dengan chaining (perpanjangan menyambung dari akhir sewa aktif).
+                $period = app(\App\Services\RoomAllocationService::class)
+                    ->computeRentalPeriod($tenant->id, (int) $validated['duration']);
+
                 $transaction = Transaksi::create([
                     'owner_id' => $ownerId,
                     'penyewa_id' => $tenant->id,
                     'kamar_id' => $room->id,
                     'amount' => $validated['amount'],
                     'duration_months' => $validated['duration'],
-                    'period_start_date' => now(),
-                    'period_end_date' => now()->addMonths((int) $validated['duration']),
+                    'period_start_date' => $period['start'],
+                    'period_end_date' => $period['end'],
                     'invoice_number' => $invoice,
                     'reference_number' => $invoice,
                     'payment_date' => now(),
@@ -72,6 +76,18 @@ class CreateTransaksiTool extends Tool
                 if (! $result['ok']) {
                     throw new \RuntimeException($result['error']);
                 }
+
+                // Notifikasi owner: transaksi MASUK dicatat via AI agent (MCP).
+                \App\Models\Notification::create([
+                    'user_id' => $ownerId,
+                    'type' => 'payment_received',
+                    'category' => 'finance',
+                    'title' => 'Pemasukan Dicatat (AI Agent)',
+                    'message' => 'Pembayaran Rp ' . number_format((float) $validated['amount'], 0, ',', '.') . ' dari ' . $tenant->name . ' dicatat via AI agent.',
+                    'related_entity_type' => 'transaction',
+                    'related_entity_id' => $transaction->id,
+                    'priority' => 'medium',
+                ]);
             });
         } catch (\RuntimeException $e) {
             return Response::error($e->getMessage());

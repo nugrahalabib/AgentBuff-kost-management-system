@@ -315,3 +315,62 @@ _(Diisi seiring implementasi tiap fase.)_
   → 404. **Sisa Fase 3:** port CRUD kamar + transaksi manual + generate laporan ke owner; fitur
   "tambah penyewa → tempatkan ke kamar tersedia" (owner & admin). CATATAN: read-scoping antar-owner
   (isolasi tenant lintas owner) menyusul — saat ini data terpusat di owner1.
+- 2026-07-19 — **Batch 10 perbaikan (bug + fitur), diverifikasi via dev-loop lokal (`artisan serve`
+  → MySQL Docker :3307) lalu di-deploy ulang ke image Docker.**
+  1. **Auto-kompres foto (klien-side).** `resources/js/app.js`: `compressImageFile()` (canvas → JPEG,
+     target <1.8MB, sisi ≤1920px, lewati PDF/GIF) + auto-attach pada `input[type=file][data-auto-compress]`
+     (nonaktifkan submit saat proses). Dipasang di bukti bayar (owner/admin, halaman+modal), foto+galeri
+     tipe kamar, bukti pengeluaran. Cek-ukuran manual admin dibuang. Uji browser (puppeteer): 25MB→1.46MB.
+  2. **Hapus penyewa (wajib alasan).** `ManagesTenants::deleteTenant()` terpusat: bersihkan FK RESTRICT
+     (transaksi→cascade bukti/log/denda, denda by penyewa, room_occupancy_histories) + file bukti &
+     dokumen di disk + notifikasi terkait, lalu recompute status kamar. `destroy()` owner & admin
+     (scope owner_id, alasan `required|min:5`). **Admin yang hapus → owner dinotifikasi.** Route
+     `owner|admin.penyewa.destroy`; tombol + modal alasan di biodata-penyewa. Uji: tenant sintetis full-relasi
+     → hapus bersih tanpa error FK + owner ternotifikasi; alur HTTP validasi alasan.
+  3. **Durasi perpanjangan sewa (akumulatif).** Semua jalur (`PemilikKos`/`Admin/TransactionController::
+     storeManual`, `CreateTransaksiTool`) dulu hitung `now()->addMonths()` → ganti ke
+     `RoomAllocationService::computeRentalPeriod()` yang menyambung dari `period_end_date` terverifikasi
+     terakhir penyewa (fallback now). Uji: 2bln lalu 3bln hari-sama = 5 bln (bukan 3).
+  4. **Bukti bayar tak bisa dibuka.** Tabrakan nama `openModal(url)` (halaman) vs `window.openModal(id)`
+     (app.js). Rename → `openProofModal`/`closeProofModal` di data-transaksi owner & admin.
+  5. **Login Google.** Kode sudah lengkap; akun Google BARU kini → role **owner** (+ baris `pemilik_kos`),
+     bukan tenant. Plumbing `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI` disiapkan di `.env`, `.env.example`,
+     `docker-compose.yml`, & loop sync `entrypoint.sh` (kosong; tinggal diisi kredensial Google Cloud).
+     Tombol muncul otomatis saat client_id terisi (diuji toggle).
+  6. **Landing tanpa harga.** Hapus seksi `#harga` (paket langganan simulasi) + anchor nav di `welcome.blade.php`.
+  7. **Amankan notifikasi.** `Admin/KamarController` `?? 1` (buang notifikasi kamar-yatim ke user id 1 =
+     admin default) → `auth()->user()->ownerId()`. Titik-merah lonceng (admin & owner) dijadikan
+     kondisional pada notifikasi belum-dibaca (dulu statis selalu menyala).
+  8. **MCP hanya owner.** Hapus nav MCP admin (`layouts/admin`), route `admin.mcp*`, view `admin/mcp.blade.php`;
+     `McpTokenController` selalu render view owner. Owner-side & endpoint `/mcp` (sanctum) tetap.
+  9. **Dashboard admin disederhanakan.** Buang card + tabel "Tugas Verifikasi" (sisa alur tenant online yang
+     sudah dihapus) + var controller mati (`pendingVerifications`, `paymentVerifications`, okupansi/movement).
+  10. **Audit pengaturan owner.** 3 tab (Harga&Tipe, Penagihan/Bank, Profil/Password) semua fungsional;
+      buang 3 route+method mati (`settings.business/profile/password`, tergantikan `updateAll`); rapikan
+      teks yang masih menyebut "tenant".
+- 2026-07-19 — **Batch 13 perbaikan lanjutan (bug + fitur), dev-loop lokal→DB Docker lalu rebuild image.**
+  1. Modal tambah tipe kamar auto-close saat sukses: `TipeKamarController@store/update` redirect ke URL
+     bersih `owner.settings` (bukan `back()` yg bawa `?add=1` → modal buka ulang).
+  2. Catatan Duo di bawah kolom harga: `toggleDuoNote()` (plain JS) tampil saat kapasitas=2, dipanggil di
+     openAdd/openEdit (pengaturan.blade).
+  3. Hapus field "Catatan" di 4 form kamar (modal+create, owner+admin); validasi `notes` nullable → aman.
+  4. Hapus kartu "Rekening Pembayaran" di pengaturan + bersihkan `updateBankSettings` (bank refs bisa error
+     krn UI tak kirim lagi) + rapikan tour/teks yg salah (denda/rekening).
+  5. **Form biodata self-service (fitur besar).** Kolom `penyewa.form_token` (migrasi). Owner/admin klik
+     "Buat Link Isi Biodata" (`generateBiodataLink`) → link publik `GET/POST /biodata/{token}` (tanpa login,
+     throttled) via `PublicBiodataController` + view `public/biodata-form.blade.php` → penyewa isi data pribadi
+     + wali + upload dokumen (disk `local`, `tenant-documents/{penyewaId}`, merge JSON `documents`) → tampil
+     otomatis di biodata. Guarded field (`is_verified_by_admin` dll) tak tersentuh. Banner link + salin + share WA.
+  6. Sembunyikan email placeholder `@internal.local` di biodata: `User::hasPlaceholderEmail()` → "Email belum diisi".
+  7. Blok hapus penyewa bila masih menempati kamar aktif (`occupiedRoom()->exists()`) di 2 `destroy()` → checkout dulu.
+  8. Notifikasi transaksi masuk & keluar: `storeExpense` (KELUAR, type `info`), owner `storeManual` & MCP
+     `CreateTransaksiTool` (MASUK, type `payment_received`) → notifikasi ke owner. Admin income sudah ada.
+  9. Perbaiki tour utama admin (dashboard.blade) + tambah step tegas "Data admin & kos tersinkron"; bump key v2.
+  10. Sidebar admin "Penyewa" jadi link langsung `admin.penyewa` (buang dropdown `toggleMenu`).
+  11. Dashboard admin diperkaya: kartu Pemasukan/Menunggu/Pengeluaran/Laba Bersih + Okupansi + tabel
+      "Transaksi Terbaru" (Admin/DashboardController scoped `ownerId()`).
+  12. **Lantai konfigurable per kos.** Kolom `pemilik_kos.floor_count` (migrasi, default 4) + field "Jumlah Lantai"
+      di pengaturan (disimpan via `updateBankSettings`). View composer `$floorCount` ke 5 view kamar → semua
+      dropdown/tab/JS-cap lantai dinamis; validasi controller max:20 (dropdown yg batasi UX).
+  13. Hapus kartu notifikasi dummy statis "Kontrak Segera Habis (Siti Aminah)" + tombol "Ingatkan via WA" di
+      admin/notifikasi.blade (mockup lama, bukan data real).

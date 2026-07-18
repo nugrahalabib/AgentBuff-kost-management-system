@@ -22,7 +22,8 @@ set_env() {
 
 for k in APP_ENV APP_DEBUG APP_URL \
          DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD \
-         SESSION_DRIVER CACHE_STORE QUEUE_CONNECTION; do
+         SESSION_DRIVER CACHE_STORE QUEUE_CONNECTION \
+         GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REDIRECT_URI; do
     if printenv "$k" >/dev/null 2>&1; then
         set_env "$k" "$(printenv "$k")"
     fi

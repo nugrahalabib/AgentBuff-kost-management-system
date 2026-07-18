@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Kamar;
 use App\Models\Notification;
 use App\Models\Transaksi;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -18,6 +19,37 @@ use Illuminate\Support\Facades\DB;
  */
 class RoomAllocationService
 {
+    /**
+     * Hitung periode sewa dengan CHAINING agar perpanjangan berakumulasi.
+     *
+     * Perpanjangan menyambung dari AKHIR masa sewa aktif penyewa, bukan dari
+     * hari ini. Contoh: penyewa perpanjang 2 bln lalu (hari yang sama) 3 bln lagi
+     * → total 5 bln (bukan 3). Untuk penyewa tanpa sewa aktif (baru / sudah lewat)
+     * → mulai dari sekarang.
+     *
+     * Basis = period_end_date TERBESAR dari transaksi penyewa yang sudah
+     * terverifikasi (owner/admin). Denda, transaksi ditolak, & pending diabaikan.
+     * Di-scope by penyewa_id saja karena penyewa_id (= user.id) unik global.
+     *
+     * @return array{start: \Illuminate\Support\Carbon, end: \Illuminate\Support\Carbon}
+     */
+    public function computeRentalPeriod(int $tenantId, int $months): array
+    {
+        $currentEnd = Transaksi::where('penyewa_id', $tenantId)
+            ->whereIn('status', ['verified_by_owner', 'verified_by_admin'])
+            ->whereNotNull('period_end_date')
+            ->max('period_end_date');
+
+        $base = ($currentEnd && Carbon::parse($currentEnd)->isFuture())
+            ? Carbon::parse($currentEnd)
+            : now();
+
+        return [
+            'start' => $base->copy(),
+            'end' => $base->copy()->addMonths($months),
+        ];
+    }
+
     /**
      * Tempatkan penyewa dari sebuah transaksi final ke kamarnya.
      *

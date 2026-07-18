@@ -99,7 +99,9 @@ class TipeKamarController extends Controller
             'user_agent' => $request->userAgent(),
         ]);
 
-        return back()->with('success', "Tipe kamar '{$validated['name']}' berhasil ditambahkan!");
+        // Redirect ke URL bersih (bukan back()) agar modal tidak terbuka ulang oleh
+        // logika ?add=1, sehingga pop-up tertutup otomatis setelah sukses menambah.
+        return redirect()->route('owner.settings')->with('success', "Tipe kamar '{$validated['name']}' berhasil ditambahkan!");
     }
 
     /**
@@ -197,7 +199,7 @@ class TipeKamarController extends Controller
             'user_agent' => $request->userAgent(),
         ]);
 
-        return back()->with('success', "Tipe kamar '{$validated['name']}' berhasil diperbarui!");
+        return redirect()->route('owner.settings')->with('success', "Tipe kamar '{$validated['name']}' berhasil diperbarui!");
     }
 
     /**

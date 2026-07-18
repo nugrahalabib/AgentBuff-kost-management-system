@@ -372,7 +372,7 @@ class LaporanController extends Controller
             $proofPath = $request->file('proof_image')->store('payment_proofs', 'public');
         }
 
-        Pengeluaran::create([
+        $expense = Pengeluaran::create([
             'owner_id' => Auth::id(),
             'type' => $request->type,
             'category' => $request->category,
@@ -380,6 +380,18 @@ class LaporanController extends Controller
             'date' => $request->date,
             'description' => $request->description,
             'proof_image' => $proofPath,
+        ]);
+
+        // Notifikasi agar transaksi KELUAR (pengeluaran) muncul di halaman notifikasi.
+        \App\Models\Notification::create([
+            'user_id' => Auth::user()->ownerId(),
+            'type' => 'info',
+            'category' => 'finance',
+            'title' => 'Pengeluaran Dicatat',
+            'message' => 'Pengeluaran ' . $request->category . ' sebesar Rp ' . number_format((float) $request->amount, 0, ',', '.') . ' telah dicatat.',
+            'related_entity_type' => 'expense',
+            'related_entity_id' => $expense->id,
+            'priority' => 'low',
         ]);
 
         return redirect()->back()->with('success', 'Pengeluaran berhasil dicatat.');

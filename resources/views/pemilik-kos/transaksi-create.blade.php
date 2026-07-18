@@ -107,9 +107,9 @@
 
                 <div>
                     <label for="payment_proof" class="block text-sm font-bold text-gray-700 mb-2">Bukti Pembayaran <span class="text-red-500">*</span></label>
-                    <input type="file" id="payment_proof" name="payment_proof" accept="image/*" required
+                    <input type="file" data-auto-compress id="payment_proof" name="payment_proof" accept="image/*" required
                         class="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-emerald-50 file:text-emerald-700 file:font-bold hover:file:bg-emerald-100">
-                    <p class="text-gray-400 text-xs mt-1">Gambar (JPG/PNG), maks 2MB.</p>
+                    <p class="text-gray-400 text-xs mt-1">Gambar (JPG/PNG). Foto besar otomatis dikecilkan — tak perlu kompres manual.</p>
                     @error('payment_proof')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
 

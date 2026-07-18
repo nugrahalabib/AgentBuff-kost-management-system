@@ -17,7 +17,7 @@
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">Lantai <span class="text-red-500">*</span></label>
                     <select name="floor_number" id="km_floor" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500">
-                        @for($i = 1; $i <= 4; $i++)<option value="{{ $i }}" {{ old('floor_number') == $i ? 'selected' : '' }}>Lantai {{ $i }}</option>@endfor
+                        @for($i = 1; $i <= $floorCount; $i++)<option value="{{ $i }}" {{ old('floor_number') == $i ? 'selected' : '' }}>Lantai {{ $i }}</option>@endfor
                     </select>
                 </div>
                 <div>
@@ -45,10 +45,6 @@
                 <input type="number" name="price_per_month" id="km_price" value="{{ old('price_per_month') }}" readonly required
                     class="w-full px-4 py-2.5 rounded-xl border border-gray-300 bg-gray-50">
             </div>
-            <div>
-                <label class="block text-sm font-bold text-gray-700 mb-1">Catatan <span class="text-gray-400">(opsional)</span></label>
-                <textarea name="notes" rows="2" class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500">{{ old('notes') }}</textarea>
-            </div>
             <div class="flex gap-3 pt-2">
                 <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl">TAMBAH KAMAR</button>
                 <button type="button" onclick="closeModal('kamarModal')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2.5 rounded-xl">BATAL</button>
@@ -58,7 +54,7 @@
 </div>
 <script>
     function kmSetPrice() { const s = document.getElementById('km_type'); const p = s.options[s.selectedIndex] && s.options[s.selectedIndex].getAttribute('data-price'); if (p) document.getElementById('km_price').value = p; }
-    function kmSyncFloor(v) { if (v && v[0] >= '1' && v[0] <= '4') document.getElementById('km_floor').value = v[0]; }
+    function kmSyncFloor(v) { if (v && v[0] >= '1' && Number(v[0]) <= {{ $floorCount }}) document.getElementById('km_floor').value = v[0]; }
     if (new URLSearchParams(window.location.search).get('add') === '1') { document.addEventListener('DOMContentLoaded', function () { window.openModal && openModal('kamarModal'); }); }
     @if($errors->has('room_number') || $errors->has('tipe_kamar_id') || $errors->has('floor_number') || $errors->has('price_per_month'))
     document.addEventListener('DOMContentLoaded', function () { window.openModal && openModal('kamarModal'); });

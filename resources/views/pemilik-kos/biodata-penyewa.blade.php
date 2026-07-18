@@ -4,6 +4,17 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
+        @if(session('biodata_link'))
+            <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-4">
+                <p class="text-sm font-bold text-indigo-800 mb-2">🔗 Link isi biodata untuk penyewa</p>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="text" id="biodataLink" readonly value="{{ session('biodata_link') }}" class="flex-1 px-3 py-2 rounded-lg border border-indigo-200 text-sm bg-white text-gray-700">
+                    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('biodataLink').value); this.textContent='Tersalin!';" class="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition">Salin</button>
+                    <a href="https://wa.me/?text={{ urlencode('Halo, tolong lengkapi biodata kamu di link ini: '.session('biodata_link')) }}" target="_blank" class="px-4 py-2 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 transition text-center">Kirim via WA</a>
+                </div>
+                <p class="text-xs text-indigo-500 mt-2">Kirim link ini ke penyewa. Setelah mereka mengisi & upload, datanya otomatis muncul di halaman ini.</p>
+            </div>
+        @endif
         @php
             $documents = $penyewa->tenantProfile?->documents ?? [];
 
@@ -63,6 +74,21 @@
                         Tempatkan ke Kamar
                     </a>
                 @endif
+
+                <form action="{{ route('owner.penyewa.biodata-link', $penyewa->id) }}" method="POST" class="inline">
+                    @csrf
+                    <button type="submit"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-100 transition shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                        Buat Link Isi Biodata
+                    </button>
+                </form>
+
+                <button type="button" onclick="openHapusPenyewaModal()"
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    Hapus
+                </button>
             </div>
         </div>
 
@@ -79,7 +105,11 @@
                     </div>
 
                     <h2 class="text-xl font-bold text-gray-900 mb-1">{{ $penyewa->name }}</h2>
-                    <p class="text-sm text-gray-500 mb-4">{{ $penyewa->email }}</p>
+                    @if($penyewa->hasPlaceholderEmail())
+                        <p class="text-sm text-gray-400 italic mb-4">Email belum diisi</p>
+                    @else
+                        <p class="text-sm text-gray-500 mb-4">{{ $penyewa->email }}</p>
+                    @endif
 
                     <div class="flex flex-col w-full gap-2 border-t border-gray-100 pt-4">
                         <div class="flex justify-between items-start text-sm">
@@ -525,4 +555,37 @@
             </div>
         </main>
     </div>
+
+    <!-- Modal Hapus Penyewa -->
+    <div id="hapusPenyewaModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19H18.93a2 2 0 001.7-3.06L13.7 4.06a2 2 0 00-3.4 0L3.36 15.94A2 2 0 005.07 19z"></path></svg>
+                </span>
+                <h3 class="text-lg font-bold text-gray-900">Hapus Penyewa</h3>
+            </div>
+            <p class="text-sm text-gray-500">Menghapus <span class="font-semibold text-gray-800">{{ $penyewa->name }}</span> secara <span class="font-semibold text-red-600">permanen</span> — beserta seluruh transaksi, bukti bayar, dan riwayatnya. Tindakan ini tidak bisa dibatalkan.</p>
+            <form action="{{ route('owner.penyewa.destroy', $penyewa->id) }}" method="POST" class="mt-4">
+                @csrf
+                @method('DELETE')
+                <label class="block text-sm font-bold text-gray-700 mb-2">Alasan penghapusan <span class="text-red-500">*</span></label>
+                <textarea name="reason" rows="3" required minlength="5" maxlength="500"
+                    placeholder="Contoh: penyewa sudah pindah / data duplikat / salah input"
+                    class="w-full px-4 py-3 rounded-xl border {{ $errors->has('reason') ? 'border-red-500' : 'border-gray-300' }} focus:ring-2 focus:ring-red-500 focus:border-transparent transition">{{ old('reason') }}</textarea>
+                @error('reason')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                <div class="flex gap-3 mt-5">
+                    <button type="button" onclick="closeHapusPenyewaModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-4 rounded-xl transition">Batal</button>
+                    <button type="submit" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl transition">Hapus Permanen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        function openHapusPenyewaModal() { const m = document.getElementById('hapusPenyewaModal'); m.classList.remove('hidden'); m.classList.add('flex'); }
+        function closeHapusPenyewaModal() { const m = document.getElementById('hapusPenyewaModal'); m.classList.add('hidden'); m.classList.remove('flex'); }
+    </script>
+    @if($errors->has('reason'))
+        <script>window.addEventListener('DOMContentLoaded', function () { openHapusPenyewaModal(); });</script>
+    @endif
 @endsection

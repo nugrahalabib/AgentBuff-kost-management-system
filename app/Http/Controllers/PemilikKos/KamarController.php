@@ -184,7 +184,7 @@ class KamarController extends Controller
 
         $validated = $request->validate([
             'room_number' => ['required', 'integer', 'min:1', Rule::unique('kamar', 'room_number')->where('owner_id', $ownerId)],
-            'floor_number' => 'required|numeric|min:1|max:4',
+            'floor_number' => 'required|numeric|min:1|max:20',
             'tipe_kamar_id' => ['required', Rule::exists('tipe_kamar', 'id')->where('owner_id', $ownerId)],
             'price_per_month' => 'required|numeric|min:0',
             'status' => 'required|in:available,maintenance',

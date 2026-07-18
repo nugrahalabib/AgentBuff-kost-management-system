@@ -13,9 +13,9 @@ class McpTokenController extends Controller
     public function index()
     {
         $tokens = auth()->user()->tokens()->latest()->get(['id', 'name', 'last_used_at', 'created_at']);
-        $view = auth()->user()->role === 'admin' ? 'admin.mcp' : 'pemilik-kos.mcp';
 
-        return view($view, [
+        // MCP hanya untuk owner (pemilik kos). Admin tidak lagi punya rute/menu MCP.
+        return view('pemilik-kos.mcp', [
             'tokens' => $tokens,
             'mcpUrl' => url('/mcp'),
         ]);

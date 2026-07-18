@@ -80,7 +80,7 @@
 
             <div>
                 <label class="block text-sm font-bold text-gray-700 mb-1">Bukti Pembayaran <span class="text-red-500">*</span></label>
-                <input type="file" name="payment_proof" accept="image/*" required class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:text-emerald-700 file:font-bold">
+                <input type="file" data-auto-compress name="payment_proof" accept="image/*" required class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:text-emerald-700 file:font-bold">
                 @error('payment_proof')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
             </div>
 

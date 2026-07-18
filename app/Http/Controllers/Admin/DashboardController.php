@@ -27,9 +27,6 @@ class DashboardController extends Controller
             })
             ->count();
 
-        // Tugas Validasi (Payment Verifications - matches TransactionController 'pending' filter)
-        $pendingVerifications = Transaksi::where('owner_id', $ownerId)->where('status', 'pending_verification')->count();
-
         // Kamar Terisi (Occupied Rooms - matches RoomController status='occupied' logic)
         $occupiedRooms = Kamar::where('owner_id', $ownerId)->has('occupants')->count();
 
@@ -112,45 +109,46 @@ class DashboardController extends Controller
             ->limit(3)
             ->get();
 
-        // Tugas Validasi Table (Payment Verifications) - matches TransactionController logic
-        $paymentVerifications = Transaksi::where('owner_id', $ownerId)
-            ->where('status', 'pending_verification')
-            ->with(['tenant', 'paymentProofs'])
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
+        // Ringkasan finansial bulan ini (scoped ke owner yang dikelola admin).
+        $month = Carbon::now()->month;
+        $year = Carbon::now()->year;
+        $totalIncome = Transaksi::where('owner_id', $ownerId)
+            ->whereMonth('payment_date', $month)->whereYear('payment_date', $year)
+            ->where('status', 'verified_by_owner')->sum('final_amount');
+        $pendingIncome = Transaksi::where('owner_id', $ownerId)
+            ->where('status', 'verified_by_admin')->sum('amount');
+        $manualExpenses = \App\Models\Pengeluaran::where('owner_id', $ownerId)
+            ->whereMonth('date', $month)->whereYear('date', $year)->sum('amount');
+        $maintenanceExpenses = \App\Models\MaintenanceRequest::whereHas('room', fn ($q) => $q->where('owner_id', $ownerId))
+            ->whereMonth('created_at', $month)->whereYear('created_at', $year)
+            ->where('status', 'completed')->sum('estimated_cost');
+        $totalExpenses = $manualExpenses + $maintenanceExpenses;
+        $netProfit = $totalIncome - $totalExpenses;
 
-        // Room Occupancy Rate
-        $totalRooms = Kamar::where('owner_id', $ownerId)->count();
-        $occupancyRate = $totalRooms > 0 ? round(($occupiedRooms / $totalRooms) * 100) : 0;
-
-        // Tenant Movement (new active tenants this month)
-        $newTenants = User::where('role', 'tenant')
-            ->whereHas('tenantProfile', fn($q) => $q->where('owner_id', $ownerId))
-            ->where(function ($q) {
-                $q->whereHas('currentRoom')->orWhereHas('occupiedRoom');
-            })
-            ->whereMonth('created_at', Carbon::now()->month)
-            ->count();
-
-        $checkoutTenants = Kamar::where('owner_id', $ownerId)
-            ->doesntHave('occupants')
-            ->whereMonth('updated_at', Carbon::now()->month) // This is imperfect but best guess without status history
-            ->count();
+        // Okupansi & transaksi terbaru
+        $totalKamar = Kamar::where('owner_id', $ownerId)->count();
+        $kamarMaintenance = Kamar::where('owner_id', $ownerId)->where('status', 'maintenance')->count();
+        $occupancyRate = $totalKamar > 0 ? round(($occupiedRooms / $totalKamar) * 100) : 0;
+        $recentTransactions = Transaksi::where('owner_id', $ownerId)
+            ->whereIn('status', ['verified_by_owner', 'verified_by_admin'])
+            ->with(['tenant', 'room'])
+            ->orderByDesc('created_at')->limit(6)->get();
 
         return view('admin.dashboard', [
             'totalPenyewa' => $totalTenants,
-            'pendingVerifications' => $pendingVerifications,
             'kamarTersedia' => $availableRooms,
             'kamarTerisi' => $occupiedRooms,
             'dueSoon' => $dueSoon,
             'detailPenyewaJatuhTempo' => $dueTenantsDetails,
             'latestNotifications' => $latestNotifications,
-            'paymentVerifications' => $paymentVerifications,
+            'totalIncome' => $totalIncome,
+            'pendingIncome' => $pendingIncome,
+            'totalExpenses' => $totalExpenses,
+            'netProfit' => $netProfit,
             'occupancyRate' => $occupancyRate,
-            'totalKamar' => $totalRooms,
-            'penyewaBaru' => $newTenants,
-            'penyewaCheckout' => $checkoutTenants,
+            'totalKamar' => $totalKamar,
+            'kamarMaintenance' => $kamarMaintenance,
+            'recentTransactions' => $recentTransactions,
         ]);
     }
 }

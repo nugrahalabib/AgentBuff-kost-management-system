@@ -29,6 +29,12 @@ services:
       SESSION_DRIVER: file
       CACHE_STORE: database
       QUEUE_CONNECTION: database
+      # Google OAuth — nilai DIBACA dari file .env (gitignored) lewat interpolasi,
+      # supaya secret TIDAK ikut ter-commit di file compose ini. Isi di .env lalu
+      # `docker compose up -d` ulang. Redirect URI harus cocok dgn Google Cloud.
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      GOOGLE_REDIRECT_URI: "${GOOGLE_REDIRECT_URI:-http://localhost:8000/auth/google/callback}"
     depends_on:
       db:
         condition: service_healthy

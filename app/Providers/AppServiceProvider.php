@@ -25,5 +25,19 @@ class AppServiceProvider extends ServiceProvider
             'user' => \App\Models\User::class,
             'room' => \App\Models\Kamar::class,
         ]);
+
+        // Jumlah lantai kos (dinamis per kos) tersedia sebagai $floorCount di semua
+        // view kamar — mengganti hardcode 4 lantai pada dropdown/tab/filter lantai.
+        \Illuminate\Support\Facades\View::composer([
+            'pemilik-kos.kamar', 'pemilik-kos.kamar-create',
+            'admin.kamar', 'admin.kamar-create', 'partials.modal-kamar',
+        ], function ($view) {
+            $count = 4;
+            if (auth()->check()) {
+                $owner = auth()->user()->resolveOwner();
+                $count = (int) ($owner?->businessSettings?->floor_count ?? 4);
+            }
+            $view->with('floorCount', max(1, $count));
+        });
     }
 }

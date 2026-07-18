@@ -148,7 +148,7 @@
                     $avatarUrl = 'https://ui-avatars.com/api/?name=' . urlencode($transaction->tenant->name);
                 @endphp
                 @if ($proofUrl)
-                    <div class="w-16 h-16 rounded-xl bg-gray-100 border-2 {{ $isPending ? 'border-orange-200' : ($isRejected ? 'border-red-200' : 'border-gray-200') }} overflow-hidden cursor-pointer relative flex-shrink-0 group" onclick="openModal('{{ $proofUrl }}')">
+                    <div class="w-16 h-16 rounded-xl bg-gray-100 border-2 {{ $isPending ? 'border-orange-200' : ($isRejected ? 'border-red-200' : 'border-gray-200') }} overflow-hidden cursor-pointer relative flex-shrink-0 group" onclick="openProofModal('{{ $proofUrl }}')">
                         <img src="{{ $proofUrl }}" class="w-full h-full object-cover group-hover:scale-110 transition">
                         <div class="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                              <svg class="w-6 h-6 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -168,7 +168,7 @@
                         <span class="text-[10px] font-bold text-blue-700">EDC</span>
                     </div>
                 @else
-                    <div class="w-16 h-16 rounded-xl bg-gray-100 border-2 border-gray-200 overflow-hidden cursor-pointer relative flex-shrink-0 grayscale hover:grayscale-0 transition" onclick="openModal('{{ $avatarUrl }}')">
+                    <div class="w-16 h-16 rounded-xl bg-gray-100 border-2 border-gray-200 overflow-hidden cursor-pointer relative flex-shrink-0 grayscale hover:grayscale-0 transition" onclick="openProofModal('{{ $avatarUrl }}')">
                         <img src="{{ $avatarUrl }}" class="w-full h-full object-cover">
                     </div>
                 @endif
@@ -360,7 +360,7 @@
                                         $proofUrl = $proof?->proof_url;
                                     @endphp
                                     @if($proofUrl)
-                                        <button onclick="openModal('{{ $proofUrl }}')" class="text-gray-400 hover:text-emerald-600 transition p-1" title="Lihat Bukti">
+                                        <button onclick="openProofModal('{{ $proofUrl }}')" class="text-gray-400 hover:text-emerald-600 transition p-1" title="Lihat Bukti">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                                         </button>
                                     @endif
@@ -410,21 +410,21 @@
 
     <div id="proof-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" onclick="closeModal()"></div>
+            <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" onclick="closeProofModal()"></div>
             <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <img id="modal-image" src="" class="w-full rounded-lg">
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="button" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-emerald-600 text-base font-medium text-white hover:bg-emerald-700 sm:ml-3 sm:w-auto sm:text-sm" onclick="closeModal()">Tutup</button>
+                    <button type="button" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-emerald-600 text-base font-medium text-white hover:bg-emerald-700 sm:ml-3 sm:w-auto sm:text-sm" onclick="closeProofModal()">Tutup</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        function openModal(url) { document.getElementById('modal-image').src = url; document.getElementById('proof-modal').classList.remove('hidden'); }
-        function closeModal() { document.getElementById('proof-modal').classList.add('hidden'); }
+        function openProofModal(url) { document.getElementById('modal-image').src = url; document.getElementById('proof-modal').classList.remove('hidden'); }
+        function closeProofModal() { document.getElementById('proof-modal').classList.add('hidden'); }
         
         // Reject Modal Functions
         let currentRejectId = null;

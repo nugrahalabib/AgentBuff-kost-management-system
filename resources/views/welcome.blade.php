@@ -24,7 +24,6 @@
                 <div class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
                     <a href="#fitur" class="hover:text-emerald-700 transition">Fitur</a>
                     <a href="#mcp" class="hover:text-emerald-700 transition">AI Agent (MCP)</a>
-                    <a href="#harga" class="hover:text-emerald-700 transition">Harga</a>
                 </div>
 
                 <div class="hidden md:flex items-center gap-3">
@@ -45,7 +44,6 @@
             <div x-show="open" x-cloak x-transition class="md:hidden pb-4 space-y-1">
                 <a href="#fitur" @click="open=false" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-emerald-50">Fitur</a>
                 <a href="#mcp" @click="open=false" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-emerald-50">AI Agent (MCP)</a>
-                <a href="#harga" @click="open=false" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-emerald-50">Harga</a>
                 <div class="pt-2 flex gap-2">
                     @auth
                         <a href="{{ route('dashboard') }}" class="flex-1 text-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold">Dashboard</a>
@@ -158,61 +156,6 @@
   }
 }</code></pre>
                 </div>
-            </div>
-        </div>
-    </section>
-
-    {{-- ===================== HARGA ===================== --}}
-    <section id="harga" class="py-20 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center max-w-2xl mx-auto">
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900">Harga sederhana, sesuai skala kos</h2>
-                <p class="mt-4 text-gray-600">Mulai gratis, tingkatkan saat kos-mu berkembang.</p>
-                <p class="mt-2 text-xs text-amber-600 font-semibold">* Harga simulasi untuk demo — belum ada penagihan nyata.</p>
-            </div>
-
-            @php
-                $plans = [
-                    [
-                        'name' => 'Gratis', 'price' => 'Rp 0', 'per' => 'selamanya', 'popular' => false,
-                        'desc' => 'Untuk satu kos kecil.',
-                        'features' => ['1 kos', 'Hingga 10 kamar', '1 akun admin', 'Manajemen kamar & penyewa', 'Transaksi manual', 'Laporan bulanan'],
-                    ],
-                    [
-                        'name' => 'Pro', 'price' => 'Rp 99rb', 'per' => '/bulan', 'popular' => true,
-                        'desc' => 'Untuk kos yang berkembang.',
-                        'features' => ['Hingga 3 kos', 'Kamar tak terbatas', '5 akun admin', 'Semua jenis laporan (PDF & Excel)', 'Verifikasi transaksi', 'Dukungan prioritas'],
-                    ],
-                    [
-                        'name' => 'Bisnis', 'price' => 'Rp 249rb', 'per' => '/bulan', 'popular' => false,
-                        'desc' => 'Untuk jaringan kos + otomasi AI.',
-                        'features' => ['Kos & admin tak terbatas', 'Semua fitur Pro', 'Akses MCP + bearer token', 'Kontrol via AI agent', 'Laporan komprehensif', 'Log audit lengkap'],
-                    ],
-                ];
-            @endphp
-
-            <div class="mt-14 grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                @foreach($plans as $plan)
-                    <div class="relative rounded-2xl bg-white p-8 shadow-sm border {{ $plan['popular'] ? 'border-emerald-500 ring-2 ring-emerald-500 md:-translate-y-3 shadow-xl' : 'border-gray-100' }} transition">
-                        @if($plan['popular'])
-                            <span class="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold shadow">TERPOPULER</span>
-                        @endif
-                        <h3 class="font-extrabold text-xl text-gray-900">{{ $plan['name'] }}</h3>
-                        <p class="mt-1 text-sm text-gray-500">{{ $plan['desc'] }}</p>
-                        <div class="mt-5 flex items-baseline gap-1">
-                            <span class="text-4xl font-extrabold text-gray-900">{{ $plan['price'] }}</span>
-                            <span class="text-gray-500 text-sm">{{ $plan['per'] }}</span>
-                        </div>
-                        <a href="{{ route('register') }}" class="mt-6 block text-center px-5 py-3 rounded-xl font-bold transition {{ $plan['popular'] ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md' : 'bg-gray-100 text-gray-800 hover:bg-gray-200' }}">
-                            {{ $plan['name'] === 'Gratis' ? 'Mulai Gratis' : 'Pilih ' . $plan['name'] }}
-                        </a>
-                        <ul class="mt-6 space-y-3 text-sm text-gray-600">
-                            @foreach($plan['features'] as $f)
-                                <li class="flex items-start gap-2"><span class="text-emerald-500 mt-0.5">✔</span> {{ $f }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endforeach
             </div>
         </div>
     </section>

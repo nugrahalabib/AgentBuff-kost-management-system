@@ -390,4 +390,59 @@ class PenyewaController extends Controller
 
         return back()->with('success', "Penyewa {$user->name} berhasil di-checkout dari Kamar {$occupiedRoom->room_number}");
     }
+
+    /**
+     * Hapus penyewa (admin) — wajib menyertakan alasan. Owner kos otomatis diberi
+     * notifikasi (lihat trait ManagesTenants::deleteTenant).
+     */
+    public function destroy(Request $request, User $user)
+    {
+        if ($user->role !== 'tenant') {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'reason' => 'required|string|min:5|max:500',
+        ], [
+            'reason.required' => 'Alasan penghapusan penyewa wajib diisi.',
+            'reason.min'      => 'Alasan minimal 5 karakter.',
+        ]);
+
+        // Scope: penyewa harus milik kos yang dikelola admin ini.
+        if ((int) ($user->tenantProfile?->owner_id) !== $this->tenantOwnerId()) {
+            abort(403);
+        }
+
+        // Blok hapus bila penyewa masih menempati kamar aktif — checkout dulu.
+        if ($user->occupiedRoom()->exists()) {
+            return back()->with('error', "Penyewa {$user->name} masih menempati kamar aktif. Lakukan checkout terlebih dahulu sebelum menghapus.");
+        }
+
+        $name = $user->name;
+        $this->deleteTenant($user, $validated['reason']);
+
+        return redirect()->route('admin.penyewa')
+            ->with('success', "Penyewa {$name} telah dihapus. Pemilik kos telah diberi tahu.");
+    }
+
+    /** Generate/rotate link publik agar penyewa mengisi biodatanya sendiri (admin). */
+    public function generateBiodataLink(User $user)
+    {
+        if ($user->role !== 'tenant') {
+            abort(404);
+        }
+        if ((int) ($user->tenantProfile?->owner_id) !== $this->tenantOwnerId()) {
+            abort(403);
+        }
+        $profile = $user->tenantProfile;
+        if (! $profile) {
+            return back()->with('error', 'Profil penyewa tidak ditemukan.');
+        }
+        $profile->form_token = \Illuminate\Support\Str::random(40);
+        $profile->save();
+
+        return back()
+            ->with('biodata_link', route('public.biodata.edit', ['token' => $profile->form_token]))
+            ->with('success', 'Link biodata dibuat. Salin & kirim ke penyewa untuk mengisi datanya.');
+    }
 }

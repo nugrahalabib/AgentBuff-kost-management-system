@@ -15,6 +15,7 @@ class Penyewa extends Model
     protected $fillable = [
         'user_id',
         'owner_id',
+        'form_token',
         'tenant_type',
         'phone',
         // Personal data

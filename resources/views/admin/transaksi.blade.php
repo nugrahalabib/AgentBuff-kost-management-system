@@ -224,7 +224,7 @@
 
                     @if ($proofUrl)
                         <div class="w-16 h-16 rounded-xl bg-gray-100 border border-gray-200 overflow-hidden cursor-pointer relative flex-shrink-0 group"
-                            onclick="openModal('{{ $proofUrl }}')">
+                            onclick="openProofModal('{{ $proofUrl }}')">
                             <img src="{{ $proofUrl }}" class="w-full h-full object-cover group-hover:scale-110 transition">
                             <div
                                 class="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
@@ -257,7 +257,7 @@
                         </div>
                     @else
                         <div class="w-16 h-16 rounded-xl bg-gray-100 border border-gray-200 overflow-hidden cursor-pointer flex-shrink-0 grayscale hover:grayscale-0 transition"
-                            onclick="openModal('{{ $avatarUrl }}')">
+                            onclick="openProofModal('{{ $avatarUrl }}')">
                             <img src="{{ $avatarUrl }}" class="w-full h-full object-cover">
                         </div>
                     @endif
@@ -443,7 +443,7 @@
                                         $proofUrl = $proof?->proof_url;
                                     @endphp
                                     @if($proofUrl)
-                                        <button onclick="openModal('{{ $proofUrl }}')"
+                                        <button onclick="openProofModal('{{ $proofUrl }}')"
                                             class="text-gray-400 hover:text-emerald-600 transition p-1" title="Lihat Bukti">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -503,7 +503,7 @@
     <div id="proof-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog"
         aria-modal="true">
         <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" onclick="closeModal()"></div>
+            <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" onclick="closeProofModal()"></div>
             <div
                 class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
@@ -512,7 +512,7 @@
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <button type="button"
                         class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-emerald-600 text-base font-medium text-white hover:bg-emerald-700 sm:ml-3 sm:w-auto sm:text-sm"
-                        onclick="closeModal()">Tutup</button>
+                        onclick="closeProofModal()">Tutup</button>
                 </div>
             </div>
         </div>
@@ -540,12 +540,12 @@
             }
         }
 
-        function openModal(url) {
+        function openProofModal(url) {
             document.getElementById('modal-image').src = url;
             document.getElementById('proof-modal').classList.remove('hidden');
         }
 
-        function closeModal() {
+        function closeProofModal() {
             document.getElementById('proof-modal').classList.add('hidden');
         }
 
@@ -889,9 +889,9 @@
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Bukti / Nota <span
                                     class="text-red-500">*</span></label>
-                            <input type="file" name="payment_proof" id="manual-proof" accept="image/*"
+                            <input type="file" data-auto-compress name="payment_proof" id="manual-proof" accept="image/*"
                                 class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition {{ $errors->has('payment_proof') ? 'border border-red-500 rounded-xl p-1' : '' }}">
-                            <p class="text-xs text-gray-400 mt-1">Format: JPG, PNG. Maksimal 2MB.</p>
+                            <p class="text-xs text-gray-400 mt-1">Format: JPG, PNG. Foto besar otomatis dikecilkan — tak perlu kompres manual.</p>
                             @error('payment_proof')
                                 <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
                             @enderror
@@ -1049,13 +1049,9 @@
             };
         }
 
-        // Validasi ukuran file bukti
-        document.getElementById('manual-proof').addEventListener('change', function () {
-            if (this.files[0] && this.files[0].size > 2 * 1024 * 1024) {
-                Toast.fire({ icon: 'warning', title: 'Ukuran file terlalu besar! Maksimal 2MB.' });
-                this.value = '';
-            }
-        });
+        // Ukuran file bukti kini ditangani otomatis oleh auto-kompres
+        // (data-auto-compress pada #manual-proof, lihat resources/js/app.js):
+        // gambar besar dikecilkan sebelum diunggah, jadi tak perlu penolakan manual.
     </script>
 
 

@@ -34,101 +34,19 @@ class SettingsController extends Controller
         ]);
     }
 
-    /**
-     * Update business settings
-     */
-    public function updateBusinessSettings(Request $request)
-    {
-        $validated = $request->validate([
-            'late_payment_fine_per_day' => 'nullable|numeric|min:0',
-            'late_payment_tolerance_days' => 'nullable|numeric|min:0',
-            'invoice_due_day' => 'nullable|numeric|min:1|max:31',
-            'invoice_reminder_days_before' => 'required|numeric|min:1',
-            'invoice_reminder_enabled' => 'nullable|boolean',
-        ]);
-
-        $owner = Auth::user();
-        $settings = $owner->businessSettings ?? new \App\Models\PemilikKos(['owner_id' => $owner->id]);
-
-        $settings->update([
-            'late_payment_fine_per_day' => $validated['late_payment_fine_per_day'],
-            'late_payment_tolerance_days' => $validated['late_payment_tolerance_days'],
-            'invoice_due_day' => $validated['invoice_due_day'],
-            'invoice_reminder_days_before' => $validated['invoice_reminder_days_before'],
-            'invoice_reminder_enabled' => $validated['invoice_reminder_enabled'] ?? false,
-        ]);
-
-        return back()->with('success', 'Pengaturan bisnis berhasil diperbarui');
-    }
-
-    /**
-     * Update owner profile
-     */
-    public function updateProfile(Request $request)
-    {
-        /** @var User $owner */
-        $owner = Auth::user();
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:user,email,' . $owner->id,
-            'boarding_house_name' => 'required|string|max:255',
-        ]);
-
-        $owner->update([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-        ]);
-
-        // Update Boarding House Name in Business Settings
-        $settings = $owner->businessSettings;
-        if (!$settings) {
-            $settings = new \App\Models\PemilikKos(['owner_id' => $owner->id]);
-        }
-        $settings->boarding_house_name = $validated['boarding_house_name'];
-        $settings->save();
-
-        return back()->with('success', 'Profil berhasil diperbarui');
-    }
-
-    /**
-     * Change password
-     */
-    public function changePassword(Request $request)
-    {
-        /** @var User $owner */
-        $owner = Auth::user();
-
-        $validated = $request->validate([
-            'current_password' => 'required|current_password',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
-        // Save old password to history
-        PasswordHistory::create([
-            'user_id' => $owner->id,
-            'old_password_hash' => $owner->password,
-            'changed_at' => now(),
-            'changed_from_ip' => $request->ip(),
-            'changed_from_user_agent' => $request->userAgent(),
-        ]);
-
-        // Update password
-        $owner->update(['password' => bcrypt($validated['password'])]);
-
-        return back()->with('success', 'Password berhasil diubah');
-    }
+    // updateBusinessSettings(), updateProfile(), dan changePassword() dihapus:
+    // seluruh fungsinya (profil, bank, reminder, ganti password + histori) sudah
+    // dicakup updateAll() (master save) yang dipakai halaman Pengaturan.
 
     /**
      * Update bank account settings
      */
     public function updateBankSettings(Request $request)
     {
+        // Rekening bank dihapus dari UI; tab "Pengaturan" kini hanya reminder + jumlah lantai.
         $validated = $request->validate([
-            'bank_name' => 'nullable|string|max:100',
-            'bank_account_number' => 'nullable|string|max:50',
-            'bank_account_name' => 'nullable|string|max:255',
             'invoice_reminder_days_before' => 'nullable|integer|min:1',
+            'floor_count' => 'nullable|integer|min:1|max:20',
         ]);
 
         $owner = Auth::user();
@@ -139,15 +57,12 @@ class SettingsController extends Controller
             $settings->save();
         }
 
-        $updateData = [
-            'bank_name' => $validated['bank_name'],
-            'bank_account_number' => $validated['bank_account_number'],
-            'bank_account_name' => $validated['bank_account_name'],
-        ];
-
-        // Add reminder days if provided
+        $updateData = [];
         if (isset($validated['invoice_reminder_days_before'])) {
             $updateData['invoice_reminder_days_before'] = $validated['invoice_reminder_days_before'];
+        }
+        if (isset($validated['floor_count'])) {
+            $updateData['floor_count'] = $validated['floor_count'];
         }
 
         $settings->update($updateData);

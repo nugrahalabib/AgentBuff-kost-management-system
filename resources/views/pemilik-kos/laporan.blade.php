@@ -761,14 +761,14 @@
                                     {{-- Proof Upload --}}
                                     <div>
                                         <label for="proof_image" class="block text-sm font-medium text-gray-700">Bukti Nota / Foto (Opsional)</label>
-                                        <input type="file" name="proof_image" id="proof_image" accept="image/*,.pdf" class="mt-1 block w-full text-sm text-gray-500
+                                        <input type="file" data-auto-compress name="proof_image" id="proof_image" accept="image/*,.pdf" class="mt-1 block w-full text-sm text-gray-500
                                             file:mr-4 file:py-2 file:px-4
                                             file:rounded-full file:border-0
                                             file:text-sm file:font-semibold
                                             file:bg-red-50 file:text-red-700
                                             hover:file:bg-red-100
                                         ">
-                                        <p class="mt-1 text-xs text-gray-500">Maksimal 2MB (JPG, PNG, PDF)</p>
+                                        <p class="mt-1 text-xs text-gray-500">JPG/PNG (foto besar otomatis dikecilkan) atau PDF (maks 2MB).</p>
                                         @error('proof_image')
                                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                                         @enderror

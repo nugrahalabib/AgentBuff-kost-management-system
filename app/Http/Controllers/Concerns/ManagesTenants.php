@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Models\Kamar;
+use App\Models\Notification;
 use App\Models\Penyewa;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -97,5 +99,102 @@ trait ManagesTenants
 
             return $user;
         });
+    }
+
+    /**
+     * Hapus penyewa (user data-only + profil) beserta SELURUH relasinya dengan aman.
+     * WAJIB menyertakan alasan. Bila yang menghapus ADMIN, owner kos diberi notifikasi.
+     *
+     * Menangani FK RESTRICT (transaksi, denda, histori occupancy), membersihkan file
+     * bukti bayar & dokumen identitas dari disk, lalu me-recompute status kamar.
+     * Pemanggil WAJIB memastikan $tenant memang milik kos-nya (scope owner_id).
+     */
+    protected function deleteTenant(User $tenant, string $reason): void
+    {
+        $actor = auth()->user();
+        $ownerId = $this->tenantOwnerId();
+        $tenantName = $tenant->name;
+        $tenantId = $tenant->id;
+
+        DB::transaction(function () use ($tenant, $tenantId, $reason, $actor, $ownerId, $tenantName) {
+            // Kamar yang sedang/pernah ditempati (untuk recompute status setelah hapus).
+            $roomIds = DB::table('riwayat_penghuni_kamar')
+                ->where('user_id', $tenantId)
+                ->pluck('kamar_id')->unique();
+
+            // 1. Hapus file bukti bayar fisik dari semua transaksi penyewa.
+            $proofPaths = DB::table('bukti_bayar')
+                ->join('transaksi', 'bukti_bayar.transaksi_id', '=', 'transaksi.id')
+                ->where('transaksi.penyewa_id', $tenantId)
+                ->pluck('bukti_bayar.file_path');
+            foreach ($proofPaths as $path) {
+                $this->deleteStoredFile($path);
+            }
+
+            // 2. Hapus file dokumen identitas penyewa (JSON documents + pas foto KTP).
+            $profile = Penyewa::where('user_id', $tenantId)->first();
+            if ($profile) {
+                foreach ((array) ($profile->documents ?? []) as $docPath) {
+                    $this->deleteStoredFile($docPath);
+                }
+                $this->deleteStoredFile($profile->id_card_photo_path);
+            }
+
+            // 3. Bersihkan relasi FK RESTRICT (urutan penting): denda (by penyewa) →
+            //    histori occupancy → transaksi. Menghapus transaksi memicu cascade DB
+            //    untuk bukti_bayar, log verifikasi, & denda-by-transaksi.
+            DB::table('late_payment_fines')->where('penyewa_id', $tenantId)->delete();
+            DB::table('room_occupancy_histories')->where('penyewa_id', $tenantId)->delete();
+            DB::table('transaksi')->where('penyewa_id', $tenantId)->delete();
+
+            // 4. Hapus notifikasi yang MENYEBUT penyewa ini (bukan FK → manual).
+            Notification::where('related_entity_type', 'tenant')
+                ->where('related_entity_id', $tenantId)->delete();
+
+            // 5. Hapus user → cascade DB: profil penyewa, pivot riwayat_penghuni_kamar,
+            //    notifikasi milik user, password_history; kamar.current_tenant_id → NULL.
+            $tenant->delete();
+
+            // 6. Recompute status kamar yang tadi ditempati (pivot sudah ter-cascade).
+            foreach ($roomIds as $rid) {
+                $room = Kamar::find($rid);
+                if (! $room || $room->status === 'maintenance') {
+                    continue;
+                }
+                $room->refresh();
+                $room->update(['status' => $room->isFull() ? 'occupied' : 'available']);
+            }
+
+            // 7. Audit log (dengan alasan).
+            \App\Services\LoggerService::log('delete', "Hapus penyewa {$tenantName}. Alasan: {$reason}");
+
+            // 8. Bila ADMIN yang menghapus, beri tahu owner kos.
+            if ($actor->role === 'admin') {
+                Notification::create([
+                    'user_id' => $ownerId,
+                    'type' => 'info',
+                    'category' => 'system',
+                    'title' => 'Penyewa Dihapus oleh Admin',
+                    'message' => "Admin {$actor->name} menghapus penyewa \"{$tenantName}\". Alasan: {$reason}",
+                    'related_entity_type' => 'tenant',
+                    'related_entity_id' => $tenantId,
+                    'priority' => 'high',
+                    'action_required' => false,
+                ]);
+            }
+        });
+    }
+
+    /** Hapus sebuah file dari disk privat/publik bila ada (aman bila path null). */
+    private function deleteStoredFile(?string $path): void
+    {
+        if (! $path) {
+            return;
+        }
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($path)) {
+                Storage::disk($disk)->delete($path);
+            }
+        }
     }
 }

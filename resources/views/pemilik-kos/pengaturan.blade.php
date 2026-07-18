@@ -154,16 +154,16 @@
         </div>
 
         <div id="content-rules" class="space-y-6 hidden">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
+            <div class="max-w-xl">
+
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                     <h4 class="text-lg font-bold text-gray-800 mb-4">Siklus Penagihan</h4>
-                    <p class="text-sm text-gray-500 mb-4">Pengaturan notifikasi WA dan reminder sewa untuk tenant.</p>
+                    <p class="text-sm text-gray-500 mb-4">Atur berapa hari sebelum jatuh tempo pengingat sewa penyewa dimunculkan.</p>
                     
                     <div class="space-y-4">
                         <div>
-                            <label class="text-sm font-bold text-gray-700">Reminder Sewa Tenant (H-?)</label>
-                            <p class="text-xs text-gray-500 mb-2">Tenant akan mendapat reminder di dashboard saat sewa mendekati jatuh tempo.</p>
+                            <label class="text-sm font-bold text-gray-700">Pengingat Jatuh Tempo Sewa (H-?)</label>
+                            <p class="text-xs text-gray-500 mb-2">Kamu akan dapat notifikasi saat masa sewa penyewa mendekati jatuh tempo.</p>
                             <div class="flex items-center gap-2">
                                 <span class="text-gray-600 font-bold">H -</span>
                                 <input type="number" name="invoice_reminder_days_before" id="reminderDaysBefore" 
@@ -176,26 +176,19 @@
                     </div>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                    <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
-                        Rekening Pembayaran
-                    </h4>
-                    <p class="text-sm text-gray-500 mb-4">Informasi rekening yang akan ditampilkan di halaman pembayaran tenant.</p>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nama Bank</label>
-                            <input type="text" id="bankName" value="{{ $businessSettings->bank_name ?? '' }}" placeholder="Contoh: BCA, Mandiri, BNI" class="w-full border-gray-300 rounded-lg text-sm font-medium focus:ring-emerald-500">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mt-6">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4">Struktur Kos</h4>
+                    <p class="text-sm text-gray-500 mb-4">Sesuaikan jumlah lantai kos-mu. Pilihan lantai pada form & filter kamar mengikuti angka ini.</p>
+                    <div>
+                        <label class="text-sm font-bold text-gray-700">Jumlah Lantai</label>
+                        <div class="flex items-center gap-2 mt-2">
+                            <input type="number" name="floor_count" id="floorCountInput"
+                                   value="{{ $businessSettings->floor_count ?? 4 }}"
+                                   min="1" max="20"
+                                   class="w-24 border-gray-300 rounded-lg text-sm font-bold focus:ring-emerald-500 text-center">
+                            <span class="text-gray-600">lantai</span>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nomor Rekening</label>
-                            <input type="text" id="bankAccountNumber" value="{{ $businessSettings->bank_account_number ?? '' }}" placeholder="Contoh: 1234567890" class="w-full border-gray-300 rounded-lg text-sm font-medium focus:ring-emerald-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nama Pemilik Rekening</label>
-                            <input type="text" id="bankAccountName" value="{{ $businessSettings->bank_account_name ?? '' }}" placeholder="Contoh: PT. Kos Melati" class="w-full border-gray-300 rounded-lg text-sm font-medium focus:ring-emerald-500">
-                        </div>
+                        <p class="text-xs text-amber-600 mt-2">Menurunkan jumlah lantai tidak menghapus kamar yang sudah ada di lantai atas — hanya menyembunyikan pilihannya di form baru.</p>
                     </div>
                 </div>
 
@@ -286,7 +279,7 @@
 
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">Kapasitas <span class="text-red-500">*</span></label>
-                    <select name="capacity" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" required>
+                    <select name="capacity" id="capacityInput" onchange="toggleDuoNote()" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" required>
                         <option value="1">Single (1 Orang)</option>
                         <option value="2">Duo (2 Orang)</option>
                     </select>
@@ -314,6 +307,7 @@
                         <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold">Rp</span>
                         <input type="number" name="price_per_month" placeholder="0" class="w-full pl-10 px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" required min="0">
                     </div>
+                    <p id="duoPriceNote" class="hidden text-xs text-amber-600 mt-1 font-medium">Untuk tipe "Duo", harga di atas otomatis dibagi dua untuk setiap penghuni.</p>
                 </div>
 
                 <div>
@@ -326,19 +320,19 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Foto Utama <span class="text-gray-400">(Opsional, max 2MB)</span></label>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Foto Utama <span class="text-gray-400">(Opsional — foto besar otomatis dikecilkan)</span></label>
                     <div id="imagePreviewContainer" class="mb-2 hidden">
                         <img id="imagePreview" src="" alt="Preview" class="w-full h-32 object-cover rounded-lg border">
                     </div>
-                    <input type="file" name="image" id="imageInput" accept="image/jpeg,image/png,image/webp" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" onchange="previewImage(this)">
+                    <input type="file" data-auto-compress name="image" id="imageInput" accept="image/jpeg,image/png,image/webp" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" onchange="previewImage(this)">
                     <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, atau WebP</p>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Galeri Foto <span class="text-gray-400">(Max 4 foto, masing-masing 2MB)</span></label>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Galeri Foto <span class="text-gray-400">(Maks 4 foto — foto besar otomatis dikecilkan)</span></label>
                     <div id="galleryPreviewContainer" class="grid grid-cols-4 gap-2 mb-2 hidden">
                     </div>
-                    <input type="file" name="gallery_images[]" id="galleryInput" accept="image/jpeg,image/png,image/webp" multiple class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" onchange="previewGallery(this)">
+                    <input type="file" data-auto-compress name="gallery_images[]" id="galleryInput" accept="image/jpeg,image/png,image/webp" multiple class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm" onchange="previewGallery(this)">
                     <p class="text-xs text-gray-500 mt-1">Foto tambahan untuk halaman detail kamar</p>
                 </div>
 
@@ -385,6 +379,13 @@
         let currentEditId = null;
         let currentRowId = null; // Track which row is opening the picker
 
+        // Tampilkan catatan "harga dibagi dua" di bawah kolom harga hanya saat kapasitas Duo (value 2).
+        function toggleDuoNote() {
+            const cap = document.getElementById('capacityInput');
+            const note = document.getElementById('duoPriceNote');
+            if (cap && note) note.classList.toggle('hidden', cap.value !== '2');
+        }
+
         function openAddRoomTypeModal() {
             // ... (rest of function)
             currentEditId = null;
@@ -403,7 +404,8 @@
             
             // Clear facilities list and add one empty row by default
             document.getElementById('facilitiesContainer').innerHTML = '';
-            addFacility(); 
+            addFacility();
+            toggleDuoNote();
 
             const modal = document.getElementById('roomTypeModal');
             const content = document.getElementById('roomTypeModalContent');
@@ -448,6 +450,7 @@
             document.getElementById('roomTypeForm').status.value = status;
             document.getElementById('roomTypeForm').capacity.value = capacity;
             document.getElementById('roomTypeForm').description.value = description;
+            toggleDuoNote(); // set .value tidak memicu event change, panggil manual
             
             // Populate facilities list
             const container = document.getElementById('facilitiesContainer');
@@ -693,10 +696,8 @@
             const formData = new FormData();
             formData.append('_token', '{{ csrf_token() }}');
             formData.append('invoice_reminder_days_before', document.getElementById('reminderDaysBefore')?.value || 7);
-            formData.append('bank_name', document.getElementById('bankName')?.value || '');
-            formData.append('bank_account_number', document.getElementById('bankAccountNumber')?.value || '');
-            formData.append('bank_account_name', document.getElementById('bankAccountName')?.value || '');
-            
+            formData.append('floor_count', document.getElementById('floorCountInput')?.value || 4);
+
             try {
                 const response = await fetch("{{ route('owner.settings.bank') }}", {
                     method: 'POST',
@@ -801,8 +802,8 @@ document.addEventListener('DOMContentLoaded', function () {
     window.__pageTour = [
         { popover: { title: 'Pengaturan Kos ⚙️', description: 'Halaman ini punya 3 tab. Berikut fungsi masing-masing.' } },
         { element: '#btn-pricing', popover: { title: 'Tab: Harga & Tipe', description: 'Kelola tipe kamar & harganya. Tombol “Tambah Tipe Baru” untuk menambah tipe.' } },
-        { element: '#btn-rules', popover: { title: 'Tab: Pengaturan', description: 'Atur denda keterlambatan, toleransi hari, dan siklus penagihan/invoice.' } },
-        { element: '#btn-account', popover: { title: 'Tab: Profil Pemilik', description: 'Ubah data diri, ganti password, dan rekening bank untuk menerima pembayaran.' } },
+        { element: '#btn-rules', popover: { title: 'Tab: Pengaturan', description: 'Atur pengingat jatuh tempo sewa: berapa hari sebelum jatuh tempo kamu ingin diberi notifikasi.' } },
+        { element: '#btn-account', popover: { title: 'Tab: Profil Pemilik', description: 'Ubah nama kos, nama & email login pemilik, serta ganti password.' } },
     ];
     if (new URLSearchParams(window.location.search).get('add') === '1' && typeof openAddRoomTypeModal === 'function') { openAddRoomTypeModal(); }
     window.KostTour && window.KostTour.auto('owner-pengaturan-v1', window.__pageTour);
