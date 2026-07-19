@@ -15,7 +15,9 @@
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    
+    {{-- Palet warna owner: SETELAH app.css agar override :root menang --}}
+    @include('partials.brand-theme')
+
     <style>
         /* ================= TRANSISI SIDEBAR (Style Owner) ================= */
         #main-sidebar {

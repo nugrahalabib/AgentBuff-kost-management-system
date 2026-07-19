@@ -24,6 +24,7 @@ class PemilikKos extends Model
         'bank_account_name',
         'boarding_house_name',
         'floor_count',
+        'brand_color',
     ];
 
     protected $casts = [

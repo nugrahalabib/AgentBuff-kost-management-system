@@ -290,6 +290,9 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Warna brand aktif (mengikuti warna dasar pilihan owner via --c-em-500).
+            var __b = getComputedStyle(document.documentElement).getPropertyValue('--c-em-500').trim();
+            var brandColor = __b ? 'rgb(' + __b.replace(/\s+/g, ',') + ')' : '#10B981';
             // Cashflow Chart
             var cashflowOptions = {
                 series: [{
@@ -305,7 +308,7 @@
                     toolbar: { show: false },
                     fontFamily: 'Inter, sans-serif'
                 },
-                colors: ['#10B981', '#E5E7EB'],
+                colors: [brandColor, '#E5E7EB'],
                 plotOptions: {
                     bar: {
                         horizontal: false,
@@ -351,7 +354,7 @@
                     width: 128,
                 },
                 labels: ['Terisi', 'Kosong', 'Maintenance'],
-                colors: ['#10B981', '#E5E7EB', '#FBBF24'],
+                colors: [brandColor, '#E5E7EB', '#FBBF24'],
                 dataLabels: { enabled: false },
                 plotOptions: {
                     pie: {

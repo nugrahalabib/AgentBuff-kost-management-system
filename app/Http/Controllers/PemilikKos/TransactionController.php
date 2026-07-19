@@ -91,7 +91,15 @@ class TransactionController extends Controller
         // Stats for Dashboard/Cards
         $stats = [
             'pending_verification' => Transaksi::where('owner_id', $owner->id)->where('status', 'verified_by_admin')->count(),
+            // Jumlah yang masih menunggu validasi owner (provisional).
             'total_amount' => Transaksi::where('owner_id', $owner->id)->where('status', 'verified_by_admin')->sum('provisional_amount'),
+            // Total Pemasukan REALISASI bulan ini — DISAMAKAN dengan kartu di dashboard
+            // (status verified_by_owner, final_amount, bulan berjalan) agar konsisten.
+            'total_income' => Transaksi::where('owner_id', $owner->id)
+                ->whereMonth('payment_date', now()->month)
+                ->whereYear('payment_date', now()->year)
+                ->where('status', 'verified_by_owner')
+                ->sum('final_amount'),
         ];
 
         // Get distinct floors owned by this owner

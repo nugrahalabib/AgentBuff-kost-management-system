@@ -93,6 +93,9 @@ class SettingsController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:user,email,' . $owner->id,
             'boarding_house_name' => 'required|string|max:255',
+
+            // Warna dasar (brand) — harus salah satu key di config/brand_colors.php
+            'brand_color' => 'nullable|string|in:' . implode(',', array_keys(config('brand_colors', []))),
         ];
 
         // Conditional Password Validation
@@ -122,6 +125,7 @@ class SettingsController extends Controller
             'bank_account_name' => $validated['bank_account_name'] ?? $settings->bank_account_name,
             'invoice_reminder_days_before' => $validated['invoice_reminder_days_before'],
             'floor_count' => $validated['floor_count'] ?? $settings->floor_count,
+            'brand_color' => $validated['brand_color'] ?? $settings->brand_color ?? 'emerald',
         ]);
         $settings->save();
 

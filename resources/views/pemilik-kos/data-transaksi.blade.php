@@ -36,8 +36,8 @@
             <div class="absolute left-0 top-0 h-full w-1 bg-emerald-500"></div>
             <div>
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Pemasukan</p>
-                <p class="text-2xl font-extrabold text-gray-800 mt-1">Rp {{ number_format($stats['total_amount'] ?? 0, 0, ',', '.') }} <span class="text-sm font-medium text-gray-400">Perlu Validasi</span></p>
-                <p class="text-[10px] text-emerald-600 mt-1 font-bold">{{ now()->format('F Y') }}</p>
+                <p class="text-2xl font-extrabold text-gray-800 mt-1">Rp {{ number_format($stats['total_income'] ?? 0, 0, ',', '.') }} <span class="text-sm font-medium text-gray-400">Bulan Ini</span></p>
+                <p class="text-[10px] text-gray-400 mt-1"><span class="text-emerald-600 font-bold">{{ now()->format('F Y') }}</span> · Rp {{ number_format($stats['total_amount'] ?? 0, 0, ',', '.') }} perlu validasi</p>
             </div>
             <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>

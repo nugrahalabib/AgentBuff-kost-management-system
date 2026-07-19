@@ -303,6 +303,24 @@ Dikonfirmasi 2026-07-03:
   Verifikasi (puppeteer, dev 8001): light & dark, desktop & mobile 390px — **0px overflow horizontal**, nav tak
   menimpa hero (64px vs 214px), scroll-reveal aktif. Head + nav + tombol toggle tema dipertahankan utuh.
 
+- 2026-07-19 — **Batch: pemasukan konsisten, warna dasar custom, dark mode diperdalam.**
+  (1) **#1 Total Pemasukan** halaman Data Transaksi kini = angka realisasi bulan ini (status
+  `verified_by_owner`, `final_amount`) — DISAMAKAN dgn kartu dashboard; jumlah `verified_by_admin`
+  ditampilkan sbg subteks "perlu validasi" (`TransactionController::index` + `data-transaksi.blade`).
+  (2) **#4 Warna dasar web (per-owner)**: palet `emerald` Tailwind dipetakan ke CSS variable `--c-em-*`
+  (`tailwind.config.js` + default `:root` di `app.css` = emerald asli → tanpa override identik). Owner
+  pilih palet di **Pengaturan → Profil & Pengaturan → Warna Dasar Web** (7 preset: emerald, teal, biru,
+  indigo, ungu, rose, amber — `config/brand_colors.php`); disimpan di kolom baru `pemilik_kos.brand_color`
+  (migration + `PemilikKos` fillable + `SettingsController::updateAll`). Layout owner **& admin** inject
+  `<style>:root{--c-em-*}` SETELAH `@vite` (via `partials/brand-theme`, admin ikut owner lewat
+  `resolveOwner()`); pratinjau langsung tanpa reload (set variabel di JS). Grafik ApexCharts dashboard ikut
+  warna brand (baca `--c-em-500`). Landing/publik tetap emerald (tak di-inject).
+  (3) **#2+#3 Dark mode diperdalam**: lapisan `html.dark` menyeluruh di `app.css` — hover terang → elevasi
+  gelap (fix baris/tombol putih), tint bg semua warna (emerald via var + status), teks berwarna diterangkan,
+  border/badge/tab/kartu-kamar. Emerald pakai var → dark mode ikut warna brand owner. Verifikasi puppeteer:
+  save picker persist (violet), owner+admin dark terbaca, warna custom (violet) tampil di dark, landing CTA
+  & owner light tanpa regresi. Proses lapisan dark digenerate via workflow multi-agent + kritik.
+
 ## ✅ STATUS: SEMUA FASE SELESAI
 
 Aplikasi telah bertransformasi dari manajemen kos single-tenant + reservasi publik menjadi

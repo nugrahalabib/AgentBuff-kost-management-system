@@ -186,6 +186,28 @@
                 </div>
             </div>
 
+            {{-- Warna Dasar Web (brand color) --}}
+            @php $brandColors = config('brand_colors', []); $currentBrand = $businessSettings->brand_color ?? 'emerald'; @endphp
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6" x-data="{ brand: '{{ $currentBrand }}' }">
+                <h4 class="text-lg font-bold text-gray-800 mb-1">Warna Dasar Web</h4>
+                <p class="text-sm text-gray-500 mb-4">Ganti warna aksen dashboard kos-mu (berlaku untuk halaman owner &amp; admin). Perubahan tampil langsung sebagai pratinjau; baru tersimpan saat menekan <b>Simpan Semua Pengaturan</b>.</p>
+                <input type="hidden" id="brandColorInput" value="{{ $currentBrand }}">
+                <div class="flex flex-wrap gap-3">
+                    @foreach($brandColors as $key => $c)
+                        <button type="button"
+                            @click="brand='{{ $key }}'; document.getElementById('brandColorInput').value='{{ $key }}'; window.applyBrandPreview && window.applyBrandPreview('{{ $key }}')"
+                            :class="brand==='{{ $key }}' ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-800 ring-gray-800 dark:ring-white scale-110' : 'ring-1 ring-gray-200 hover:scale-105'"
+                            class="relative w-11 h-11 rounded-xl transition shadow-sm"
+                            style="background-color: {{ $c['swatch'] }}"
+                            title="{{ $c['label'] }}" aria-label="Warna {{ $c['label'] }}">
+                            <svg x-show="brand==='{{ $key }}'" x-cloak class="w-5 h-5 text-white absolute inset-0 m-auto" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </button>
+                    @endforeach
+                </div>
+                <p class="mt-3 text-xs text-gray-400" x-show="brand==='{{ $currentBrand }}'">Warna aktif tersimpan.</p>
+                <p class="mt-3 text-xs text-emerald-600 font-semibold" x-show="brand!=='{{ $currentBrand }}'" x-cloak>Pratinjau — tekan "Simpan Semua Pengaturan" untuk menyimpan.</p>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                 <h4 class="text-lg font-bold text-gray-800 mb-4">Siklus Penagihan</h4>
@@ -724,7 +746,8 @@
             formData.append('email', document.getElementById('ownerEmail')?.value || '');
             formData.append('invoice_reminder_days_before', document.getElementById('reminderDaysBefore')?.value || 7);
             formData.append('floor_count', document.getElementById('floorCountInput')?.value || 4);
-            
+            formData.append('brand_color', document.getElementById('brandColorInput')?.value || 'emerald');
+
             const currentPass = document.getElementById('currentPassword')?.value;
             const newPass = document.getElementById('newPassword')?.value;
             const confirmPass = document.getElementById('confirmPassword')?.value;
@@ -767,8 +790,16 @@
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
+
+        // Pratinjau warna dasar (brand) langsung tanpa reload: set variabel --c-em-* di <html>.
+        window.__brandPalettes = @json(collect(config('brand_colors', []))->map(fn ($c) => $c['shades']));
+        window.applyBrandPreview = function (key) {
+            var p = window.__brandPalettes[key];
+            if (!p) return;
+            for (var k in p) { document.documentElement.style.setProperty('--c-em-' + k, p[k]); }
+        };
     </script>
-    
+
     <style>
         .toggle-checkbox:checked { right: 0; border-color: #10B981; }
         .toggle-checkbox:checked + .toggle-label { background-color: #10B981; }
