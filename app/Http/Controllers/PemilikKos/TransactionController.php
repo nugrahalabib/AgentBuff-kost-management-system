@@ -7,6 +7,7 @@ use App\Models\Transaksi;
 use App\Models\PaymentVerificationLog;
 use App\Models\Notification;
 use App\Models\BuktiBayar;
+use App\Http\Controllers\Concerns\NotifiesAdmins;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Storage;
 
 class TransactionController extends Controller
 {
+    use NotifiesAdmins;
+
     /**
      * Display transactions pending owner verification
      */
@@ -464,6 +467,8 @@ class TransactionController extends Controller
         } catch (\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
+
+        $this->notifyAdminsOfChange('Penyewa Ditempatkan', "Owner menempatkan {$tenant->name} di kamar {$room->room_number}.", 'transaction');
 
         return redirect()->route('owner.verifikasi-transaksi')
             ->with('success', 'Transaksi manual berhasil dicatat & penyewa ditempatkan.');

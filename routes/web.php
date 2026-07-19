@@ -93,6 +93,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/penyewa/{user}/checkout', [OwnerPenyewaController::class, 'checkout'])->name('penyewa.checkout');
             Route::delete('/penyewa/{user}', [OwnerPenyewaController::class, 'destroy'])->name('penyewa.destroy');
             Route::post('/penyewa/{user}/biodata-link', [OwnerPenyewaController::class, 'generateBiodataLink'])->name('penyewa.biodata-link');
+            Route::get('/penyewa/{user}/biodata/edit', [OwnerPenyewaController::class, 'editBiodata'])->name('penyewa.biodata.edit');
+            Route::put('/penyewa/{user}/biodata', [OwnerPenyewaController::class, 'updateBiodata'])->name('penyewa.biodata.update');
 
             // 4. Laporan (cashflow + generate laporan sendiri)
             Route::get('/laporan', [OwnerLaporanController::class, 'index'])->name('laporan');
@@ -170,6 +172,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/penyewa/{user}/checkout', [AdminPenyewaController::class, 'checkout'])->name('penyewa.checkout');
         Route::delete('/penyewa/{user}', [AdminPenyewaController::class, 'destroy'])->name('penyewa.destroy');
         Route::post('/penyewa/{user}/biodata-link', [AdminPenyewaController::class, 'generateBiodataLink'])->name('penyewa.biodata-link');
+        Route::get('/penyewa/{user}/biodata/edit', [AdminPenyewaController::class, 'editBiodata'])->name('penyewa.biodata.edit');
+        Route::put('/penyewa/{user}/biodata', [AdminPenyewaController::class, 'updateBiodata'])->name('penyewa.biodata.update');
 
         // Detail Penyewa
         Route::get('/detail-penyewa', function () {

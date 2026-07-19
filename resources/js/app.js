@@ -61,6 +61,21 @@ window.KostTour = {
     },
 };
 
+/* ============================================================
+ * Beralih tema terang/gelap. Preferensi disimpan di localStorage
+ * ('theme'). Kelas .dark dipasang di <html> — lihat lapisan CSS
+ * di app.css & script anti-FOUC di <head> tiap layout.
+ * ============================================================ */
+window.applyTheme = (theme) => {
+    const dark = theme === 'dark';
+    document.documentElement.classList.toggle('dark', dark);
+    try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+};
+window.toggleTheme = () => {
+    const dark = document.documentElement.classList.contains('dark');
+    window.applyTheme(dark ? 'light' : 'dark');
+};
+
 /* Helper modal pop-up sederhana (toggle invisible/opacity). */
 window.openModal = (id) => {
     const m = document.getElementById(id);
@@ -151,6 +166,20 @@ function attachAutoCompress(input) {
         if (!input.files || input.files.length === 0) return;
         const form = input.closest('form');
         const submitBtns = form ? form.querySelectorAll('[type="submit"]') : [];
+
+        // Feedback visual di bawah input agar pengguna tahu prosesnya berjalan.
+        let status = input.parentElement && input.parentElement.querySelector('.auto-compress-status');
+        const needsCompress = Array.from(input.files).some((f) => f.type.startsWith('image/') && f.size > AUTO_COMPRESS_MAX_BYTES);
+        if (needsCompress) {
+            if (!status) {
+                status = document.createElement('p');
+                status.className = 'auto-compress-status text-[11px] mt-1';
+                input.insertAdjacentElement('afterend', status);
+            }
+            status.className = 'auto-compress-status text-[11px] text-amber-600 mt-1';
+            status.textContent = '⏳ Mengecilkan ukuran foto...';
+        }
+
         submitBtns.forEach((b) => (b.disabled = true)); // cegah submit saat kompres berjalan
         try {
             const dt = new DataTransfer();
@@ -158,6 +187,10 @@ function attachAutoCompress(input) {
                 dt.items.add(await compressImageFile(f));
             }
             input.files = dt.files;
+            if (status && input.files[0]) {
+                status.className = 'auto-compress-status text-[11px] text-emerald-600 mt-1';
+                status.textContent = '✓ Foto siap diunggah (' + Math.round(input.files[0].size / 1024) + ' KB).';
+            }
         } finally {
             submitBtns.forEach((b) => (b.disabled = false));
         }

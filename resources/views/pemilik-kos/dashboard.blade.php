@@ -400,10 +400,12 @@ document.addEventListener('DOMContentLoaded', function () {
         { element: 'a[href$="/owner/verifikasi-transaksi"]', popover: { title: 'Data Transaksi', description: 'Input pembayaran manual & verifikasi bukti transfer penyewa.' } },
         { element: 'a[href$="/owner/laporan"]', popover: { title: 'Laporan', description: 'Buat laporan keuangan, kamar, dan penyewa (PDF & Excel).' } },
         { element: 'a[href$="/owner/admin-control"]', popover: { title: 'Tim & Akses', description: 'Buat akun admin untuk membantu mengelola kos (opsional).' } },
-        { element: 'a[href$="/owner/settings"]', popover: { title: 'Pengaturan', description: 'Atur info kos, rekening bank, dan denda keterlambatan.' } },
+        { element: 'a[href$="/owner/settings"]', popover: { title: 'Pengaturan', description: 'Atur profil kos & pemilik, pengingat jatuh tempo sewa, jumlah lantai, dan ganti password.' } },
+        { element: 'a[href$="/owner/notifikasi"]', popover: { title: 'Notifikasi', description: 'Pemberitahuan penting: pembayaran masuk/keluar, kamar perlu perbaikan, kontrak akan habis, hingga perubahan data oleh admin — jadi kamu selalu tahu apa yang terjadi di kos.' } },
+        { element: 'a[href$="/owner/mcp"]', popover: { title: 'MCP / AI Agent', description: 'Buat bearer token agar AI agent (mis. Claude/Codex) bisa mengelola kos-mu lewat protokol MCP: cek kamar, catat penyewa & transaksi, buat laporan, dan lainnya.' } },
         { popover: { title: 'Siap! 🎉', description: 'Mulai dengan menambah kamar di menu Data Kamar. Tombol “Panduan” di kanan bawah memutar ulang tur ini kapan saja.' } },
     ];
-    window.KostTour && window.KostTour.auto('owner-dashboard-v1', window.__pageTour);
+    window.KostTour && window.KostTour.auto('owner-dashboard-v2', window.__pageTour);
 });
 </script>
 @endpush

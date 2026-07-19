@@ -5,12 +5,15 @@ namespace App\Http\Controllers\PemilikKos;
 use App\Http\Controllers\Controller;
 use App\Models\Kamar;
 use App\Models\TipeKamar;
+use App\Http\Controllers\Concerns\NotifiesAdmins;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class KamarController extends Controller
 {
+    use NotifiesAdmins;
+
     /**
      * Display rooms (view-only for owner)
      */
@@ -104,13 +107,11 @@ class KamarController extends Controller
         $viewType = $request->input('view', 'grid');
 
         if ($viewType === 'list') {
-            $rooms = $query->orderBy('floor_number', 'asc')
-                           ->orderBy('room_number', 'asc')
+            $rooms = $query->orderByRaw('CAST(room_number AS UNSIGNED) ASC')
                            ->paginate(10);
         } else {
             // Grid view: Show all rooms (no pagination)
-            $rooms = $query->orderBy('floor_number', 'asc')
-                           ->orderBy('room_number', 'asc')
+            $rooms = $query->orderByRaw('CAST(room_number AS UNSIGNED) ASC')
                            ->get();
         }
 
@@ -202,6 +203,7 @@ class KamarController extends Controller
         ]);
 
         \App\Services\LoggerService::log('create', "Tambah kamar {$validated['room_number']}", $room);
+        $this->notifyAdminsOfChange('Kamar Baru', "Owner menambah kamar {$validated['room_number']}.");
 
         return redirect()->route('owner.kamar')
             ->with('success', 'Kamar ' . $validated['room_number'] . ' berhasil ditambahkan!');

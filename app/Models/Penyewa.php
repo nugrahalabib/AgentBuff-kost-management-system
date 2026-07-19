@@ -50,6 +50,8 @@ class Penyewa extends Model
 
     protected $casts = [
         'documents' => 'array',
+        'birth_date' => 'date',
+        'guardian_birth_date' => 'date',
         'is_verified_by_admin' => 'boolean',
         'verified_at' => 'datetime',
     ];

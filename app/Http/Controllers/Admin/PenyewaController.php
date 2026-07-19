@@ -10,10 +10,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Concerns\ManagesTenants;
+use App\Http\Controllers\Concerns\HandlesBiodataForm;
 
 class PenyewaController extends Controller
 {
-    use ManagesTenants;
+    use ManagesTenants, HandlesBiodataForm;
 
     /** Form tambah penyewa baru (admin). */
     public function create()
@@ -444,5 +445,49 @@ class PenyewaController extends Controller
         return back()
             ->with('biodata_link', route('public.biodata.edit', ['token' => $profile->form_token]))
             ->with('success', 'Link biodata dibuat. Salin & kirim ke penyewa untuk mengisi datanya.');
+    }
+
+    /** Halaman edit biodata penyewa oleh admin (isi/ubah data & upload dokumen). */
+    public function editBiodata(User $user)
+    {
+        if ($user->role !== 'tenant') {
+            abort(404);
+        }
+        if ((int) ($user->tenantProfile?->owner_id) !== $this->tenantOwnerId()) {
+            abort(403);
+        }
+        $profile = $user->tenantProfile;
+        if (! $profile) {
+            abort(404);
+        }
+        $profile->load('user');
+
+        return view('biodata-edit', [
+            'layout' => 'layouts.admin',
+            'penyewa' => $user,
+            'profile' => $profile,
+            'docTypes' => ['ktp', 'kartu_mahasiswa', 'ktp_ortu', 'kartu_keluarga', 'pas_foto', 'surat_pernyataan'],
+            'updateRoute' => route('admin.penyewa.biodata.update', $user->id),
+            'backRoute' => route('admin.penyewa.show', $user->id),
+        ]);
+    }
+
+    /** Simpan biodata penyewa (admin). */
+    public function updateBiodata(Request $request, User $user)
+    {
+        if ($user->role !== 'tenant') {
+            abort(404);
+        }
+        if ((int) ($user->tenantProfile?->owner_id) !== $this->tenantOwnerId()) {
+            abort(403);
+        }
+        $profile = $user->tenantProfile;
+        if (! $profile) {
+            abort(404);
+        }
+        $profile->load('user');
+        $this->applyBiodata($profile, $request);
+
+        return redirect()->route('admin.penyewa.show', $user->id)->with('success', 'Biodata penyewa berhasil diperbarui.');
     }
 }

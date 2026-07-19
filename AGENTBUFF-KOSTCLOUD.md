@@ -4,7 +4,7 @@
 > perlu mengingat tujuan, keputusan, rencana, dan progres. Diperbarui setiap ada
 > perubahan besar.
 
-Terakhir diperbarui: 2026-07-03
+Terakhir diperbarui: 2026-07-19
 
 ---
 
@@ -272,6 +272,20 @@ Dikonfirmasi 2026-07-03:
   compile (lolos meski rusak); validasi benar = **php-lint file di `storage/framework/views/`** atau
   render halamannya.
 
+- 2026-07-19 — **FITUR: Mode Terang/Gelap (theme switch) + konsistensi warna landing.**
+  (1) `tailwind.config.js` → `darkMode: 'class'`. Lapisan **CSS override** di `resources/css/app.css`
+  (`html.dark .bg-white/.bg-gray-50/.text-gray-*/.border-*`, kontrol form, gradien terang→gelap) memberi
+  dark mode **menyeluruh** tanpa menyunting tiap elemen. `window.toggleTheme()/applyTheme()` di `app.js`
+  menyimpan preferensi di `localStorage('theme')`; **script anti-FOUC** di `<head>` tiap layout
+  (landing/welcome, `layouts/pemilik-kos`, `layouts/admin`) memasang kelas `.dark` sebelum render
+  (default ikut `prefers-color-scheme`). Tombol matahari/bulan: nav landing (desktop + menu mobile) &
+  topbar owner/admin. (2) **Konsistensi landing** (`welcome.blade.php`): seksi **#mcp** & **footer**
+  yang tadinya `bg-gray-900` (gelap) → `bg-gray-50` (terang) agar seragam dgn seksi lain; teks/aksen
+  disesuaikan, blok kode terminal (mockup `mcp.json`) tetap gelap. Verifikasi (puppeteer, dev 8001 +
+  Docker 8000): toggle membalik tema & **persist** lintas reload/login; landing terang seragam, dark
+  cohesive; owner `/owner/dashboard` & admin `/admin/dashboard` punya toggle + dark mode aktif
+  (`bodyBg #0f172a`).
+
 ## ✅ STATUS: SEMUA FASE SELESAI
 
 Aplikasi telah bertransformasi dari manajemen kos single-tenant + reservasi publik menjadi
@@ -374,3 +388,42 @@ _(Diisi seiring implementasi tiap fase.)_
       dropdown/tab/JS-cap lantai dinamis; validasi controller max:20 (dropdown yg batasi UX).
   13. Hapus kartu notifikasi dummy statis "Kontrak Segera Habis (Siti Aminah)" + tombol "Ingatkan via WA" di
       admin/notifikasi.blade (mockup lama, bukan data real).
+- 2026-07-19 — **Batch 7 penyempurnaan (lanjutan biodata, dashboard, pengaturan).**
+  1. Urutan kamar: `orderByRaw('CAST(room_number AS UNSIGNED) ASC')` (owner+admin) — nomor menaik murni,
+     bukan lantai-dulu (kamar 102 di lt.2 dulu muncul setelah 103).
+  2. Tab "Pengaturan" digabung ke tab "Profil Pemilik" → satu tab "Profil & Pengaturan" (kartu Siklus
+     Penagihan + Struktur Kos/Jumlah Lantai dipindah, tombol simpan tunggal `updateAll` + floor_count;
+     hapus btn-rules/#content-rules, rapikan switchTab & tour).
+  3. Catatan kapasitas jadi dinamis: penjelasan tipe Single/Duo muncul sesuai pilihan (bukan lagi teks
+     harga-dibagi-dua statis); catatan harga-dibagi-dua tetap di bawah kolom harga saat Duo.
+  4. **Owner & admin bisa EDIT biodata penyewa** (bukan cuma generate link): route `penyewa.biodata.edit`
+     /`.update`, view `biodata-edit` (layout dinamis) + tombol "Edit Biodata" di halaman biodata.
+  5. Tanggal lahir jadi **3 dropdown** (Tgl/Bulan/Tahun; tahun 1940–kini) — mudah pilih tahun; digabung
+     jadi date di server.
+  6. Field baru di form biodata: **Telp Rumah Wali, NIK Wali, Email penyewa** (email menyasar akun User).
+  7. Dashboard admin **tanpa keuangan** (admin tak boleh lihat keuangan kos): buang kartu Pemasukan/
+     Pengeluaran/Laba + Transaksi Terbaru → ganti kartu **Okupansi Kos** + **Penyewa Terbaru** (non-uang).
+  Refactor DRY: field biodata diekstrak ke `partials/biodata-fields.blade.php` + logika simpan ke trait
+  `HandlesBiodataForm` (dipakai form publik & edit owner/admin).
+- 2026-07-19 — **Batch 5 penyempurnaan (notifikasi, form modal, biodata, pengaturan).**
+  1. Notifikasi ke admin saat OWNER mengubah data (tipe kamar add/edit/hapus, kamar baru, penyewa baru,
+     penempatan) via trait `NotifiesAdmins::notifyAdminsOfChange` — hanya saat aktor owner, TANPA nominal
+     (admin tak lihat keuangan). Menyasar semua admin milik owner tsb.
+  2. Form tambah admin jadi pop-up modal seperti owner: admin "Tambah Penyewa" (dulu link full-page)
+     → modal `partials/modal-penyewa` (diparameter `$storeRoute`). Admin kamar & transaksi sudah modal;
+     edit biodata sengaja tetap halaman.
+  3. FIX error buka link biodata yang sudah terisi: `birth_date`/`guardian_birth_date` di-cast `date` di
+     model Penyewa (sebelumnya string → `$bd?->day` error saat merender 3-dropdown tanggal).
+  4. Panduan utama owner dilengkapi step **Notifikasi** & **MCP / AI Agent** (+ teks Pengaturan diperbarui),
+     bump key tur v2.
+  5. Kartu "Siklus Penagihan" & "Struktur Kos" di tab Pengaturan dibuat **sebelahan** (grid 2 kolom).
+  Infra: entrypoint Docker kini juga `php artisan view:clear` — compiled-view ikut volume storage, tanpa ini
+  blade lama bisa tersaji setelah rebuild image.
+- 2026-07-19 — **Batch 2 (form biodata: mobile + upload).**
+  1. Form biodata penyewa (partial `biodata-fields`) dibuat mobile-friendly: padding kartu adaptif
+     (`p-4 sm:p-6`), 3-dropdown tanggal lebih rapat (`px-2`) agar muat di layar HP; diuji 375px tanpa
+     overflow horizontal.
+  2. Auto-kompres upload: kompres sisi-klien sebenarnya SUDAH jalan (25MB→~1.5MB), tapi PHP
+     `upload_max_filesize` default 2M menolak file besar diam-diam (mis. PDF / bila JS gagal). Naikkan
+     via `docker/uploads.ini` (upload 20M / post 25M / memory 256M, di-COPY di Dockerfile). Tambah
+     feedback visual "⏳ Mengecilkan foto → ✓ Foto siap (xxx KB)" di app.js saat kompres berjalan.

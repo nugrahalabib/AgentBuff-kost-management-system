@@ -8,15 +8,17 @@
             </h2>
             <p class="text-sm text-gray-500">Kelola {{ $totalPenyewa }} penyewa aktif saat ini.</p>
         </div>
-        <a href="{{ route('admin.penyewa.create') }}" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-3 px-6 rounded-xl shadow-md transition flex items-center whitespace-nowrap">
+        <button type="button" id="btnTambahPenyewa" onclick="openModal('penyewaModal')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-3 px-6 rounded-xl shadow-md transition flex items-center whitespace-nowrap">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             TAMBAH PENYEWA
-        </a>
+        </button>
     </div>
 @endsection
 
 @section('content')
     <div class="space-y-8">
+
+        @include('partials.modal-penyewa', ['storeRoute' => 'admin.penyewa.store'])
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div
@@ -533,7 +535,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     window.__pageTour = [
-        { element: 'a[href$="/admin/penyewa/tambah"]', popover: { title: 'Tambah Penyewa', description: 'Catat penyewa baru. Penempatan ke kamar dilakukan lewat menu transaksi.' } },
+        { element: '#btnTambahPenyewa', popover: { title: 'Tambah Penyewa', description: 'Catat penyewa baru lewat form pop-up. Penempatan ke kamar dilakukan lewat menu transaksi.' } },
     ];
     window.KostTour && window.KostTour.auto('admin-penyewa-v1', window.__pageTour);
 });

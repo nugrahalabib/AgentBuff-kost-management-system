@@ -5,7 +5,7 @@
             <h3 class="font-bold text-lg text-gray-800">Tambah Penyewa</h3>
             <button type="button" onclick="closeModal('penyewaModal')" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
         </div>
-        <form action="{{ route('owner.penyewa.store') }}" method="POST" class="p-6 space-y-4">
+        <form action="{{ route($storeRoute ?? 'owner.penyewa.store') }}" method="POST" class="p-6 space-y-4">
             @csrf
             <p class="text-xs text-gray-500 -mt-1">Penyewa dicatat sebagai data internal (tanpa akun login).</p>
             <div>

@@ -71,8 +71,10 @@ else
     php artisan migrate --seed --force
 fi
 
-# Bersihkan cache config agar environment terbaru selalu dipakai
+# Bersihkan cache config & compiled view agar kode terbaru selalu dipakai
+# (storage ikut volume, jadi tanpa ini blade lama bisa tersaji setelah rebuild).
 php artisan config:clear >/dev/null 2>&1 || true
+php artisan view:clear >/dev/null 2>&1 || true
 
 echo "🚀 Aplikasi berjalan di http://localhost:8000"
 exec php artisan serve --host=0.0.0.0 --port=8000

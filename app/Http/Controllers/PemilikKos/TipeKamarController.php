@@ -5,12 +5,15 @@ namespace App\Http\Controllers\PemilikKos;
 use App\Http\Controllers\Controller;
 use App\Models\TipeKamar;
 use App\Models\AdminActivityLog;
+use App\Http\Controllers\Concerns\NotifiesAdmins;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class TipeKamarController extends Controller
 {
+    use NotifiesAdmins;
+
     /**
      * Display list of room types (via settings page)
      */
@@ -101,6 +104,8 @@ class TipeKamarController extends Controller
 
         // Redirect ke URL bersih (bukan back()) agar modal tidak terbuka ulang oleh
         // logika ?add=1, sehingga pop-up tertutup otomatis setelah sukses menambah.
+        $this->notifyAdminsOfChange('Tipe Kamar Baru', "Owner menambah tipe kamar \"{$validated['name']}\".");
+
         return redirect()->route('owner.settings')->with('success', "Tipe kamar '{$validated['name']}' berhasil ditambahkan!");
     }
 
@@ -199,6 +204,8 @@ class TipeKamarController extends Controller
             'user_agent' => $request->userAgent(),
         ]);
 
+        $this->notifyAdminsOfChange('Tipe Kamar Diperbarui', "Owner memperbarui tipe kamar \"{$validated['name']}\".");
+
         return redirect()->route('owner.settings')->with('success', "Tipe kamar '{$validated['name']}' berhasil diperbarui!");
     }
 
@@ -240,6 +247,8 @@ class TipeKamarController extends Controller
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
+
+        $this->notifyAdminsOfChange('Tipe Kamar Dihapus', "Owner menghapus tipe kamar \"{$roomTypeName}\".");
 
         return back()->with('success', "Tipe kamar '{$roomTypeName}' berhasil dihapus!");
     }

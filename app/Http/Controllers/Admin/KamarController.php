@@ -106,13 +106,11 @@ class KamarController extends Controller
         $viewType = $request->input('view', 'grid');
 
         if ($viewType === 'list') {
-            $rooms = $query->orderBy('floor_number', 'asc')
-                           ->orderBy('room_number', 'asc')
+            $rooms = $query->orderByRaw('CAST(room_number AS UNSIGNED) ASC')
                            ->paginate(10);
         } else {
             // Grid view: Show all rooms (no pagination)
-            $rooms = $query->orderBy('floor_number', 'asc')
-                           ->orderBy('room_number', 'asc')
+            $rooms = $query->orderByRaw('CAST(room_number AS UNSIGNED) ASC')
                            ->get();
         }
 

@@ -3,6 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{-- Anti-FOUC: pasang tema tersimpan sebelum halaman tampil --}}
+    <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})();</script>
     <title>AgentBuff KostCloud — Manajemen Kos Cloud + Kontrol AI Agent (MCP)</title>
     <meta name="description" content="Platform manajemen kos internal berbasis cloud untuk pemilik kos: kelola kamar, penyewa, transaksi, dan laporan. Dilengkapi kontrol lewat AI agent via MCP.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
@@ -27,6 +29,11 @@
                 </div>
 
                 <div class="hidden md:flex items-center gap-3">
+                    <button type="button" onclick="toggleTheme()" title="Ganti tema terang/gelap" aria-label="Ganti tema"
+                        class="p-2 rounded-lg text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 transition">
+                        <svg class="theme-toggle-icon-sun w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                        <svg class="theme-toggle-icon-moon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                    </button>
                     @auth
                         <a href="{{ route('dashboard') }}" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-md hover:bg-emerald-700 transition">Dashboard</a>
                     @else
@@ -44,6 +51,11 @@
             <div x-show="open" x-cloak x-transition class="md:hidden pb-4 space-y-1">
                 <a href="#fitur" @click="open=false" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-emerald-50">Fitur</a>
                 <a href="#mcp" @click="open=false" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-emerald-50">AI Agent (MCP)</a>
+                <button type="button" onclick="toggleTheme()" class="w-full px-3 py-2 rounded-lg text-gray-700 hover:bg-emerald-50 flex items-center gap-2">
+                    <svg class="theme-toggle-icon-sun w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    <svg class="theme-toggle-icon-moon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                    <span>Ganti Tema</span>
+                </button>
                 <div class="pt-2 flex gap-2">
                     @auth
                         <a href="{{ route('dashboard') }}" class="flex-1 text-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold">Dashboard</a>
@@ -118,21 +130,21 @@
     </section>
 
     {{-- ===================== MCP / AI AGENT ===================== --}}
-    <section id="mcp" class="py-20 bg-gray-900 text-white relative overflow-hidden">
+    <section id="mcp" class="py-20 bg-gray-50 relative overflow-hidden">
         <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl"></div>
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 <div>
-                    <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold">🤖 MODEL CONTEXT PROTOCOL</span>
-                    <h2 class="mt-5 text-3xl sm:text-4xl font-extrabold leading-tight">Biarkan AI agent yang mengurus kos-mu</h2>
-                    <p class="mt-5 text-gray-300 leading-relaxed">
-                        Hasilkan <span class="text-emerald-400 font-semibold">bearer token</span> sekali klik, lalu berikan ke
+                    <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">🤖 MODEL CONTEXT PROTOCOL</span>
+                    <h2 class="mt-5 text-3xl sm:text-4xl font-extrabold leading-tight text-gray-900">Biarkan AI agent yang mengurus kos-mu</h2>
+                    <p class="mt-5 text-gray-600 leading-relaxed">
+                        Hasilkan <span class="text-emerald-600 font-semibold">bearer token</span> sekali klik, lalu berikan ke
                         AI agent favoritmu. Mereka bisa menambah kamar, mencatat penyewa, memverifikasi transaksi,
                         hingga membuat laporan — semuanya lewat MCP, aman dalam batas kos-mu sendiri.
                     </p>
-                    <ul class="mt-6 space-y-3 text-sm">
+                    <ul class="mt-6 space-y-3 text-sm text-gray-700">
                         @foreach(['Claude Code', 'Codex', 'Hermes Agent', 'OpenClaw'] as $agent)
-                            <li class="flex items-center gap-3"><span class="text-emerald-400">✔</span> Kompatibel dengan <b>{{ $agent }}</b></li>
+                            <li class="flex items-center gap-3"><span class="text-emerald-600">✔</span> Kompatibel dengan <b>{{ $agent }}</b></li>
                         @endforeach
                     </ul>
                 </div>
@@ -172,9 +184,9 @@
     </section>
 
     {{-- ===================== FOOTER ===================== --}}
-    <footer class="bg-gray-900 text-gray-400 py-10">
+    <footer class="bg-gray-50 text-gray-500 py-10 border-t border-gray-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-2 font-extrabold text-white">
+            <div class="flex items-center gap-2 font-extrabold text-gray-800">
                 <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-600">🏠</span>
                 AgentBuff KostCloud
             </div>

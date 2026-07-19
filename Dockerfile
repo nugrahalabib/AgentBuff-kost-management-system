@@ -36,6 +36,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Composer dari image resmi
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# Limit upload PHP (foto/dokumen dari HP bisa besar) — lihat docker/uploads.ini.
+COPY docker/uploads.ini /usr/local/etc/php/conf.d/zz-uploads.ini
+
 WORKDIR /var/www/html
 
 # Kode aplikasi + dependency PHP (vendor dibangun ulang di dalam image)

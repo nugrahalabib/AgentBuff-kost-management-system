@@ -93,27 +93,28 @@
         </div>
     </div>
 
-    {{-- Ringkasan Keuangan Bulan Ini --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-            <p class="text-xs font-bold text-emerald-600 uppercase tracking-wider">Pemasukan (Bulan Ini)</p>
-            <h3 class="text-2xl font-extrabold text-gray-800 mt-1">Rp {{ number_format($totalIncome, 0, ',', '.') }}</h3>
-            <p class="text-[10px] text-gray-400 mt-1">Pembayaran terverifikasi</p>
+    {{-- Okupansi Kos (operasional — admin tidak melihat keuangan) --}}
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-gray-800">Okupansi Kos</h3>
+            <span class="text-2xl font-extrabold text-emerald-600">{{ $occupancyRate }}%</span>
         </div>
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-            <p class="text-xs font-bold text-amber-500 uppercase tracking-wider">Menunggu Verifikasi</p>
-            <h3 class="text-2xl font-extrabold text-gray-800 mt-1">Rp {{ number_format($pendingIncome, 0, ',', '.') }}</h3>
-            <p class="text-[10px] text-gray-400 mt-1">Pemasukan sementara</p>
+        <div class="w-full bg-gray-100 rounded-full h-3 mb-5">
+            <div class="bg-emerald-500 h-3 rounded-full transition-all" style="width: {{ $occupancyRate }}%"></div>
         </div>
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-            <p class="text-xs font-bold text-red-500 uppercase tracking-wider">Pengeluaran (Bulan Ini)</p>
-            <h3 class="text-2xl font-extrabold text-gray-800 mt-1">Rp {{ number_format($totalExpenses, 0, ',', '.') }}</h3>
-            <p class="text-[10px] text-gray-400 mt-1">Operasional + perbaikan</p>
-        </div>
-        <div class="bg-white p-5 rounded-2xl shadow-sm border {{ $netProfit >= 0 ? 'border-emerald-200' : 'border-red-200' }}">
-            <p class="text-xs font-bold {{ $netProfit >= 0 ? 'text-emerald-600' : 'text-red-500' }} uppercase tracking-wider">Laba Bersih</p>
-            <h3 class="text-2xl font-extrabold {{ $netProfit >= 0 ? 'text-emerald-700' : 'text-red-600' }} mt-1">Rp {{ number_format($netProfit, 0, ',', '.') }}</h3>
-            <p class="text-[10px] text-gray-400 mt-1">Okupansi kos {{ $occupancyRate }}%</p>
+        <div class="grid grid-cols-3 gap-4 text-center">
+            <div>
+                <p class="text-xl font-extrabold text-indigo-600">{{ $kamarTerisi }}</p>
+                <p class="text-[11px] text-gray-400 uppercase tracking-wide">Terisi</p>
+            </div>
+            <div>
+                <p class="text-xl font-extrabold text-emerald-600">{{ $kamarTersedia }}</p>
+                <p class="text-[11px] text-gray-400 uppercase tracking-wide">Tersedia</p>
+            </div>
+            <div>
+                <p class="text-xl font-extrabold text-amber-500">{{ $kamarMaintenance }}</p>
+                <p class="text-[11px] text-gray-400 uppercase tracking-wide">Perbaikan</p>
+            </div>
         </div>
     </div>
 
@@ -261,30 +262,31 @@
 
     </div>
 
-    {{-- Transaksi Terbaru --}}
+    {{-- Penyewa Terbaru --}}
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mt-8">
         <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-            <h3 class="font-bold text-gray-800">Transaksi Terbaru</h3>
-            <a href="{{ route('admin.transaksi') }}" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline">Lihat Semua</a>
+            <h3 class="font-bold text-gray-800">Penyewa Terbaru</h3>
+            <a href="{{ route('admin.penyewa') }}" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline">Lihat Semua</a>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <tbody class="divide-y divide-gray-50">
-                    @forelse ($recentTransactions as $trx)
+                    @forelse ($recentTenants as $tenant)
                         <tr class="hover:bg-gray-50 transition">
                             <td class="px-6 py-4">
-                                <p class="font-bold text-gray-800">{{ $trx->tenant->name ?? 'Penyewa' }}</p>
-                                <p class="text-[11px] text-gray-400">Kamar {{ $trx->room->room_number ?? '-' }} · {{ $trx->created_at->format('d M Y') }}</p>
+                                <p class="font-bold text-gray-800">{{ $tenant->name }}</p>
+                                <p class="text-[11px] text-gray-400">Bergabung {{ $tenant->created_at->format('d M Y') }}</p>
                             </td>
-                            <td class="px-6 py-4 text-right font-bold text-emerald-600">Rp {{ number_format($trx->final_amount ?? $trx->amount, 0, ',', '.') }}</td>
+                            <td class="px-6 py-4 text-gray-600">
+                                @php $room = $tenant->occupiedRoom->first(); @endphp
+                                {{ $room ? 'Kamar ' . $room->room_number : 'Belum ada kamar' }}
+                            </td>
                             <td class="px-6 py-4 text-right">
-                                <span class="text-[10px] font-bold px-2 py-1 rounded {{ $trx->status === 'verified_by_owner' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                                    {{ $trx->status === 'verified_by_owner' ? 'Terverifikasi' : 'Menunggu' }}
-                                </span>
+                                <a href="{{ route('admin.penyewa.show', $tenant->id) }}" class="text-xs font-bold text-emerald-600 hover:underline">Detail</a>
                             </td>
                         </tr>
                     @empty
-                        <tr><td class="px-6 py-8 text-center text-gray-400">Belum ada transaksi.</td></tr>
+                        <tr><td class="px-6 py-8 text-center text-gray-400">Belum ada penyewa.</td></tr>
                     @endforelse
                 </tbody>
             </table>

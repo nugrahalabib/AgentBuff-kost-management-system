@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Transaksi;
 use App\Http\Controllers\Concerns\ManagesTenants;
+use App\Http\Controllers\Concerns\HandlesBiodataForm;
+use App\Http\Controllers\Concerns\NotifiesAdmins;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class PenyewaController extends Controller
 {
-    use ManagesTenants;
+    use ManagesTenants, HandlesBiodataForm, NotifiesAdmins;
 
     /** Form tambah penyewa baru (owner). */
     public function create()
@@ -24,7 +26,8 @@ class PenyewaController extends Controller
     /** Simpan penyewa baru + opsional tempatkan ke kamar (owner). */
     public function store(Request $request)
     {
-        $this->persistNewTenant($request);
+        $user = $this->persistNewTenant($request);
+        $this->notifyAdminsOfChange('Penyewa Baru', "Owner menambah penyewa \"{$user->name}\".");
 
         return redirect()->route('owner.penyewa')->with('success', 'Penyewa baru berhasil ditambahkan.');
     }
@@ -371,5 +374,49 @@ class PenyewaController extends Controller
         return back()
             ->with('biodata_link', route('public.biodata.edit', ['token' => $profile->form_token]))
             ->with('success', 'Link biodata dibuat. Salin & kirim ke penyewa untuk mengisi datanya.');
+    }
+
+    /** Halaman edit biodata penyewa oleh owner (isi/ubah data & upload dokumen). */
+    public function editBiodata(User $user)
+    {
+        if ($user->role !== 'tenant') {
+            abort(404);
+        }
+        if ((int) ($user->tenantProfile?->owner_id) !== $this->tenantOwnerId()) {
+            abort(403);
+        }
+        $profile = $user->tenantProfile;
+        if (! $profile) {
+            abort(404);
+        }
+        $profile->load('user');
+
+        return view('biodata-edit', [
+            'layout' => 'layouts.pemilik-kos',
+            'penyewa' => $user,
+            'profile' => $profile,
+            'docTypes' => ['ktp', 'kartu_mahasiswa', 'ktp_ortu', 'kartu_keluarga', 'pas_foto', 'surat_pernyataan'],
+            'updateRoute' => route('owner.penyewa.biodata.update', $user->id),
+            'backRoute' => route('owner.penyewa.show', $user->id),
+        ]);
+    }
+
+    /** Simpan biodata penyewa (owner). */
+    public function updateBiodata(Request $request, User $user)
+    {
+        if ($user->role !== 'tenant') {
+            abort(404);
+        }
+        if ((int) ($user->tenantProfile?->owner_id) !== $this->tenantOwnerId()) {
+            abort(403);
+        }
+        $profile = $user->tenantProfile;
+        if (! $profile) {
+            abort(404);
+        }
+        $profile->load('user');
+        $this->applyBiodata($profile, $request);
+
+        return redirect()->route('owner.penyewa.show', $user->id)->with('success', 'Biodata penyewa berhasil diperbarui.');
     }
 }

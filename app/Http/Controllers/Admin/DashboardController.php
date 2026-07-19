@@ -109,29 +109,15 @@ class DashboardController extends Controller
             ->limit(3)
             ->get();
 
-        // Ringkasan finansial bulan ini (scoped ke owner yang dikelola admin).
-        $month = Carbon::now()->month;
-        $year = Carbon::now()->year;
-        $totalIncome = Transaksi::where('owner_id', $ownerId)
-            ->whereMonth('payment_date', $month)->whereYear('payment_date', $year)
-            ->where('status', 'verified_by_owner')->sum('final_amount');
-        $pendingIncome = Transaksi::where('owner_id', $ownerId)
-            ->where('status', 'verified_by_admin')->sum('amount');
-        $manualExpenses = \App\Models\Pengeluaran::where('owner_id', $ownerId)
-            ->whereMonth('date', $month)->whereYear('date', $year)->sum('amount');
-        $maintenanceExpenses = \App\Models\MaintenanceRequest::whereHas('room', fn ($q) => $q->where('owner_id', $ownerId))
-            ->whereMonth('created_at', $month)->whereYear('created_at', $year)
-            ->where('status', 'completed')->sum('estimated_cost');
-        $totalExpenses = $manualExpenses + $maintenanceExpenses;
-        $netProfit = $totalIncome - $totalExpenses;
-
-        // Okupansi & transaksi terbaru
+        // Okupansi (operasional — admin TIDAK melihat data keuangan kos, itu hak owner).
         $totalKamar = Kamar::where('owner_id', $ownerId)->count();
         $kamarMaintenance = Kamar::where('owner_id', $ownerId)->where('status', 'maintenance')->count();
         $occupancyRate = $totalKamar > 0 ? round(($occupiedRooms / $totalKamar) * 100) : 0;
-        $recentTransactions = Transaksi::where('owner_id', $ownerId)
-            ->whereIn('status', ['verified_by_owner', 'verified_by_admin'])
-            ->with(['tenant', 'room'])
+
+        // Penyewa terbaru (tanpa nilai uang).
+        $recentTenants = User::where('role', 'tenant')
+            ->whereHas('tenantProfile', fn ($q) => $q->where('owner_id', $ownerId))
+            ->with(['tenantProfile', 'occupiedRoom'])
             ->orderByDesc('created_at')->limit(6)->get();
 
         return view('admin.dashboard', [
@@ -141,14 +127,10 @@ class DashboardController extends Controller
             'dueSoon' => $dueSoon,
             'detailPenyewaJatuhTempo' => $dueTenantsDetails,
             'latestNotifications' => $latestNotifications,
-            'totalIncome' => $totalIncome,
-            'pendingIncome' => $pendingIncome,
-            'totalExpenses' => $totalExpenses,
-            'netProfit' => $netProfit,
             'occupancyRate' => $occupancyRate,
             'totalKamar' => $totalKamar,
             'kamarMaintenance' => $kamarMaintenance,
-            'recentTransactions' => $recentTransactions,
+            'recentTenants' => $recentTenants,
         ]);
     }
 }

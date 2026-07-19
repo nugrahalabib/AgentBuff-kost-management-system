@@ -84,6 +84,7 @@ class SettingsController extends Controller
         $rules = [
             // Business & Bank
             'invoice_reminder_days_before' => 'required|numeric|min:1',
+            'floor_count' => 'nullable|integer|min:1|max:20',
             'bank_name' => 'nullable|string|max:100',
             'bank_account_number' => 'nullable|string|max:50',
             'bank_account_name' => 'nullable|string|max:255',
@@ -120,6 +121,7 @@ class SettingsController extends Controller
             'bank_account_number' => $validated['bank_account_number'] ?? $settings->bank_account_number,
             'bank_account_name' => $validated['bank_account_name'] ?? $settings->bank_account_name,
             'invoice_reminder_days_before' => $validated['invoice_reminder_days_before'],
+            'floor_count' => $validated['floor_count'] ?? $settings->floor_count,
         ]);
         $settings->save();
 

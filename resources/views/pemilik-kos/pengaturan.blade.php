@@ -19,13 +19,9 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 Harga & Tipe
             </button>
-            <button onclick="switchTab('rules')" id="btn-rules" class="flex-1 py-3 px-6 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-50 border border-transparent transition-all duration-200 flex items-center justify-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Pengaturan
-            </button>
             <button onclick="switchTab('account')" id="btn-account" class="flex-1 py-3 px-6 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-50 border border-transparent transition-all duration-200 flex items-center justify-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                Profil Pemilik
+                Profil & Pengaturan
             </button>
         </div>
 
@@ -153,55 +149,6 @@
 
         </div>
 
-        <div id="content-rules" class="space-y-6 hidden">
-            <div class="max-w-xl">
-
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                    <h4 class="text-lg font-bold text-gray-800 mb-4">Siklus Penagihan</h4>
-                    <p class="text-sm text-gray-500 mb-4">Atur berapa hari sebelum jatuh tempo pengingat sewa penyewa dimunculkan.</p>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="text-sm font-bold text-gray-700">Pengingat Jatuh Tempo Sewa (H-?)</label>
-                            <p class="text-xs text-gray-500 mb-2">Kamu akan dapat notifikasi saat masa sewa penyewa mendekati jatuh tempo.</p>
-                            <div class="flex items-center gap-2">
-                                <span class="text-gray-600 font-bold">H -</span>
-                                <input type="number" name="invoice_reminder_days_before" id="reminderDaysBefore" 
-                                       value="{{ $businessSettings->invoice_reminder_days_before ?? 7 }}" 
-                                       min="1" 
-                                       class="w-24 border-gray-300 rounded-lg text-sm font-bold focus:ring-emerald-500 text-center">
-                                <span class="text-gray-600">Hari sebelum jatuh tempo</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mt-6">
-                    <h4 class="text-lg font-bold text-gray-800 mb-4">Struktur Kos</h4>
-                    <p class="text-sm text-gray-500 mb-4">Sesuaikan jumlah lantai kos-mu. Pilihan lantai pada form & filter kamar mengikuti angka ini.</p>
-                    <div>
-                        <label class="text-sm font-bold text-gray-700">Jumlah Lantai</label>
-                        <div class="flex items-center gap-2 mt-2">
-                            <input type="number" name="floor_count" id="floorCountInput"
-                                   value="{{ $businessSettings->floor_count ?? 4 }}"
-                                   min="1" max="20"
-                                   class="w-24 border-gray-300 rounded-lg text-sm font-bold focus:ring-emerald-500 text-center">
-                            <span class="text-gray-600">lantai</span>
-                        </div>
-                        <p class="text-xs text-amber-600 mt-2">Menurunkan jumlah lantai tidak menghapus kamar yang sudah ada di lantai atas — hanya menyembunyikan pilihannya di form baru.</p>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="flex justify-end">
-                <button onclick="saveRulesSettings()" id="rulesSaveBtn" class="bg-emerald-800 hover:bg-emerald-900 text-white text-sm font-bold py-3 px-8 rounded-xl shadow-lg transition flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-                    Simpan Pengaturan
-                </button>
-            </div>
-        </div>
-
         <div id="content-account" class="space-y-6 hidden">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
                 <h3 class="text-lg font-bold text-gray-800 mb-6 border-b border-gray-100 pb-2">Profil Pemilik & Keamanan</h3>
@@ -239,10 +186,39 @@
                 </div>
             </div>
 
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <h4 class="text-lg font-bold text-gray-800 mb-4">Siklus Penagihan</h4>
+                <p class="text-sm text-gray-500 mb-4">Atur berapa hari sebelum jatuh tempo pengingat sewa penyewa dimunculkan.</p>
+                <div>
+                    <label class="text-sm font-bold text-gray-700">Pengingat Jatuh Tempo Sewa (H-?)</label>
+                    <p class="text-xs text-gray-500 mb-2">Kamu akan dapat notifikasi saat masa sewa penyewa mendekati jatuh tempo.</p>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-600 font-bold">H -</span>
+                        <input type="number" name="invoice_reminder_days_before" id="reminderDaysBefore" value="{{ $businessSettings->invoice_reminder_days_before ?? 7 }}" min="1" class="w-24 border-gray-300 rounded-lg text-sm font-bold focus:ring-emerald-500 text-center">
+                        <span class="text-gray-600">Hari sebelum jatuh tempo</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <h4 class="text-lg font-bold text-gray-800 mb-4">Struktur Kos</h4>
+                <p class="text-sm text-gray-500 mb-4">Sesuaikan jumlah lantai kos-mu. Pilihan lantai pada form & filter kamar mengikuti angka ini.</p>
+                <div>
+                    <label class="text-sm font-bold text-gray-700">Jumlah Lantai</label>
+                    <div class="flex items-center gap-2 mt-2">
+                        <input type="number" name="floor_count" id="floorCountInput" value="{{ $businessSettings->floor_count ?? 4 }}" min="1" max="20" class="w-24 border-gray-300 rounded-lg text-sm font-bold focus:ring-emerald-500 text-center">
+                        <span class="text-gray-600">lantai</span>
+                    </div>
+                    <p class="text-xs text-amber-600 mt-2">Menurunkan jumlah lantai tidak menghapus kamar yang sudah ada di lantai atas — hanya menyembunyikan pilihannya di form baru.</p>
+                </div>
+            </div>
+            </div>
+
             <div class="flex justify-end">
                 <button onclick="saveAccountSettings()" id="accountSaveBtn" class="bg-emerald-800 hover:bg-emerald-900 text-white text-sm font-bold py-3 px-8 rounded-xl shadow-lg transition flex items-center">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-                    Simpan Profil
+                    Simpan Semua Pengaturan
                 </button>
             </div>
         </div>
@@ -283,7 +259,8 @@
                         <option value="1">Single (1 Orang)</option>
                         <option value="2">Duo (2 Orang)</option>
                     </select>
-                    <p class="text-xs text-gray-500 mt-1">Untuk tipe "Duo", harga akan otomatis dibagi dua untuk setiap penghuni.</p>
+                    <p id="capacityNoteSingle" class="text-xs text-gray-500 mt-1">Tipe <b>Single</b>: satu kamar dihuni oleh 1 orang.</p>
+                    <p id="capacityNoteDuo" class="hidden text-xs text-gray-500 mt-1">Tipe <b>Duo</b>: satu kamar dihuni bersama oleh 2 orang.</p>
                 </div>
 
                 <div>
@@ -379,11 +356,14 @@
         let currentEditId = null;
         let currentRowId = null; // Track which row is opening the picker
 
-        // Tampilkan catatan "harga dibagi dua" di bawah kolom harga hanya saat kapasitas Duo (value 2).
+        // Penjelasan tipe (Single/Duo) di bawah kapasitas + catatan "harga dibagi dua" di bawah harga (Duo).
         function toggleDuoNote() {
             const cap = document.getElementById('capacityInput');
-            const note = document.getElementById('duoPriceNote');
-            if (cap && note) note.classList.toggle('hidden', cap.value !== '2');
+            if (!cap) return;
+            const isDuo = cap.value === '2';
+            document.getElementById('duoPriceNote')?.classList.toggle('hidden', !isDuo);
+            document.getElementById('capacityNoteSingle')?.classList.toggle('hidden', isDuo);
+            document.getElementById('capacityNoteDuo')?.classList.toggle('hidden', !isDuo);
         }
 
         function openAddRoomTypeModal() {
@@ -661,11 +641,10 @@
         function switchTab(tabName) {
             // 1. Hide All Content
             document.getElementById('content-pricing').classList.add('hidden');
-            document.getElementById('content-rules').classList.add('hidden');
             document.getElementById('content-account').classList.add('hidden');
 
             // 2. Reset All Buttons Styles
-            const buttons = ['btn-pricing', 'btn-rules', 'btn-account'];
+            const buttons = ['btn-pricing', 'btn-account'];
             buttons.forEach(id => {
                 const btn = document.getElementById(id);
                 btn.className = "flex-1 py-3 px-6 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-50 border border-transparent transition-all duration-200 flex items-center justify-center gap-2";
@@ -744,6 +723,7 @@
             formData.append('name', document.getElementById('ownerName')?.value || '');
             formData.append('email', document.getElementById('ownerEmail')?.value || '');
             formData.append('invoice_reminder_days_before', document.getElementById('reminderDaysBefore')?.value || 7);
+            formData.append('floor_count', document.getElementById('floorCountInput')?.value || 4);
             
             const currentPass = document.getElementById('currentPassword')?.value;
             const newPass = document.getElementById('newPassword')?.value;
@@ -800,10 +780,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     window.__pageTour = [
-        { popover: { title: 'Pengaturan Kos ⚙️', description: 'Halaman ini punya 3 tab. Berikut fungsi masing-masing.' } },
+        { popover: { title: 'Pengaturan Kos ⚙️', description: 'Halaman ini punya 2 tab. Berikut fungsi masing-masing.' } },
         { element: '#btn-pricing', popover: { title: 'Tab: Harga & Tipe', description: 'Kelola tipe kamar & harganya. Tombol “Tambah Tipe Baru” untuk menambah tipe.' } },
-        { element: '#btn-rules', popover: { title: 'Tab: Pengaturan', description: 'Atur pengingat jatuh tempo sewa: berapa hari sebelum jatuh tempo kamu ingin diberi notifikasi.' } },
-        { element: '#btn-account', popover: { title: 'Tab: Profil Pemilik', description: 'Ubah nama kos, nama & email login pemilik, serta ganti password.' } },
+        { element: '#btn-account', popover: { title: 'Tab: Profil & Pengaturan', description: 'Ubah profil kos & pemilik, ganti password, atur pengingat jatuh tempo, dan jumlah lantai kos.' } },
     ];
     if (new URLSearchParams(window.location.search).get('add') === '1' && typeof openAddRoomTypeModal === 'function') { openAddRoomTypeModal(); }
     window.KostTour && window.KostTour.auto('owner-pengaturan-v1', window.__pageTour);
