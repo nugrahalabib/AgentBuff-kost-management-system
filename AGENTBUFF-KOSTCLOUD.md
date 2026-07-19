@@ -286,6 +286,23 @@ Dikonfirmasi 2026-07-03:
   cohesive; owner `/owner/dashboard` & admin `/admin/dashboard` punya toggle + dark mode aktif
   (`bodyBg #0f172a`).
 
+- 2026-07-19 — **REDESAIN landing page (dari "polos" jadi premium).** `welcome.blade.php` konten HERO→FOOTER
+  ditulis ulang memanfaatkan MAKSIMAL toolkit visual yang sudah ada tapi menganggur di `app.css` (particle,
+  geo-shape morph, ambient-blob, gradient-text, hero-gradient-bg, premium-card-interactive glass + border
+  gradient, stat-shimmer, section-title-line, badge-glass, scroll-reveal). Struktur baru: **Hero split**
+  (copy kiri + **mockup dashboard mini murni HTML/CSS** di kanan: sidebar emerald, kartu statistik, donut
+  okupansi SVG, grafik bar, baris "log aktivitas AI agent" sebagai pembeda MCP + chip mengambang) →
+  **strip kompatibel agent** → **band keunggulan** (1 token / Owner+Admin / Multi-kos / PDF&Excel — kapabilitas
+  faktual, TANPA metrik pengguna karangan) → **Cara Kerja 3 langkah** → **Fitur bento** (kartu unggulan span-2
+  + banner Multi-Kos lebar penuh) → **MCP** (terminal mockup dipercantik, sintaks berwarna) → **CTA** (@auth-aware)
+  → **footer lebih kaya**. Ikon jadi inline SVG (bukan emoji). Ditambah: `resources/css/app.css` — lapisan
+  override `html.dark` untuk SEMUA class toolkit rgba-putih (hero-gradient-bg, premium-card, map-glass, badge-glass,
+  stat-shimmer, ambient-blob, grid-pattern) + `.cta-pattern`; scroll-reveal **IntersectionObserver** inline di
+  welcome (fallback auto-reveal bila reduced-motion / tanpa JS agar konten tak pernah tak-terlihat) + count-up.
+  Proses: workflow multi-agent (4 arah desain → juri adversarial → sintesis → kritik dark-mode/korektness).
+  Verifikasi (puppeteer, dev 8001): light & dark, desktop & mobile 390px — **0px overflow horizontal**, nav tak
+  menimpa hero (64px vs 214px), scroll-reveal aktif. Head + nav + tombol toggle tema dipertahankan utuh.
+
 ## ✅ STATUS: SEMUA FASE SELESAI
 
 Aplikasi telah bertransformasi dari manajemen kos single-tenant + reservasi publik menjadi

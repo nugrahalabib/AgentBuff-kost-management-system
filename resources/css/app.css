@@ -597,3 +597,82 @@ html.dark .to-emerald-50 {
 .theme-toggle-icon-moon { display: none; }
 html.dark .theme-toggle-icon-sun { display: none; }
 html.dark .theme-toggle-icon-moon { display: inline; }
+
+/* ============================================================
+ * WELCOME LANDING — tambahan & override DARK MODE untuk class
+ * TOOLKIT yang tidak ikut lapisan util Tailwind (rgba putih).
+ * Tempel SETELAH blok "html.dark" yang sudah ada di app.css.
+ * ============================================================ */
+
+/* --- Pola grid untuk section CTA emerald (sama di kedua mode) --- */
+.cta-pattern {
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.10) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.10) 1px, transparent 1px);
+    background-size: 46px 46px;
+    pointer-events: none;
+}
+
+/* --- Hero gradient jadi gelap (cegah teks terang di atas latar terang) --- */
+html.dark .hero-gradient-bg {
+    background: linear-gradient(
+        135deg,
+        #0b1120 0%,
+        #0f1a2e 30%,
+        rgba(16, 185, 129, 0.08) 55%,
+        #0f1a2e 80%,
+        #0b1120 100%
+    );
+    background-size: 200% 200%;
+}
+
+/* --- Kartu premium glass -> panel gelap tembus --- */
+html.dark .premium-card-interactive {
+    background: rgba(30, 41, 59, 0.55);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+html.dark .premium-card-interactive:hover {
+    background: rgba(30, 41, 59, 0.85);
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 30px 60px -20px rgba(16, 185, 129, 0.25), 0 0 0 1px rgba(16, 185, 129, 0.08);
+}
+html.dark .premium-card-interactive::before {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.6), rgba(52, 211, 153, 0.15));
+}
+
+/* --- Kartu glass (chip mengambang) -> gelap --- */
+html.dark .map-glass-card {
+    background: rgba(30, 41, 59, 0.85);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.5);
+}
+html.dark .map-glass-card:hover {
+    border-color: rgba(16, 185, 129, 0.25);
+}
+
+/* --- Badge glass -> lebih terang & kontras di gelap --- */
+html.dark .badge-glass-emerald {
+    background: rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: #6ee7b7;
+}
+html.dark .badge-glass-red {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+}
+
+/* --- Shimmer stats: garis sedikit lebih terlihat di gelap --- */
+html.dark .stat-shimmer::after {
+    background: linear-gradient(90deg, transparent 0%, rgba(52, 211, 153, 0.10) 50%, transparent 100%);
+    background-size: 200% 100%;
+}
+
+/* --- Ambient blob & grid pattern diredam di gelap --- */
+html.dark .ambient-blob { opacity: 0.4; }
+html.dark .grid-pattern {
+    background-image:
+        linear-gradient(rgba(52, 211, 153, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(52, 211, 153, 0.05) 1px, transparent 1px);
+}
