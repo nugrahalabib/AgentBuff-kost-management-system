@@ -488,19 +488,19 @@
     {{-- ===================== CTA ===================== --}}
     <section class="relative py-24 bg-emerald-600 overflow-hidden">
         <div class="cta-pattern absolute inset-0" aria-hidden="true"></div>
-        <div class="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl" aria-hidden="true"></div>
+        <div class="cta-glow absolute -top-24 -right-24 w-96 h-96 rounded-full blur-3xl" aria-hidden="true"></div>
         <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-900/30 rounded-full blur-3xl" aria-hidden="true"></div>
         <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center scroll-reveal">
             <h2 class="text-3xl sm:text-4xl font-extrabold text-white">Siap mengelola kos lebih rapi?</h2>
             <p class="mt-4 text-emerald-50 text-lg">Buat akun pemilik kos sekarang &mdash; gratis untuk memulai, dan siap dikendalikan AI agent.</p>
             <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
                 @auth
-                    <a href="{{ route('dashboard') }}" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-emerald-700 font-extrabold shadow-lg hover:bg-emerald-50 transition transform hover:scale-105">
+                    <a href="{{ route('dashboard') }}" class="btn-on-emerald inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-emerald-700 font-extrabold shadow-lg hover:bg-emerald-50 transition transform hover:scale-105">
                         Buka Dashboard
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                     </a>
                 @else
-                    <a href="{{ route('register') }}" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-emerald-700 font-extrabold shadow-lg hover:bg-emerald-50 transition transform hover:scale-105">
+                    <a href="{{ route('register') }}" class="btn-on-emerald inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-emerald-700 font-extrabold shadow-lg hover:bg-emerald-50 transition transform hover:scale-105">
                         Daftar Sekarang
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                     </a>
