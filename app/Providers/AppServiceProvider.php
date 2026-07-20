@@ -24,6 +24,10 @@ class AppServiceProvider extends ServiceProvider
             'generated_report' => \App\Models\Laporan::class,
             'user' => \App\Models\User::class,
             'room' => \App\Models\Kamar::class,
+            // Notifikasi "Pengeluaran Dicatat" (LaporanController) memakai tipe 'expense'.
+            // Tanpa entri ini, morphMap yang di-enforce melempar "Class 'expense' not found"
+            // saat halaman notifikasi meng-eager-load relatedEntity.
+            'expense' => \App\Models\Pengeluaran::class,
         ]);
 
         // Jumlah lantai kos (dinamis per kos) tersedia sebagai $floorCount di semua
