@@ -9,14 +9,14 @@ class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registration_screen_can_be_rendered(): void
+    public function test_registration_screen_redirects_to_welcome(): void
     {
         $response = $this->get('/register');
 
-        $response->assertStatus(200);
+        $response->assertRedirect(route('welcome', ['auth' => 'register']));
     }
 
-    public function test_new_users_can_register(): void
+    public function test_email_password_registration_is_disabled(): void
     {
         $response = $this->post('/register', [
             'name' => 'Test User',
@@ -25,7 +25,8 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertGuest();
+        $response->assertRedirect(route('welcome', ['auth' => 'register']));
+        $this->assertDatabaseMissing('user', ['email' => 'test@example.com']);
     }
 }

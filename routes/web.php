@@ -60,7 +60,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         request()->session()->invalidate();
         request()->session()->regenerateToken();
 
-        return redirect()->route('login')
+        return redirect()->route('welcome', ['auth' => 'login'])
             ->with('status', 'Akun ini tidak memiliki akses ke panel manajemen.');
     })->middleware(['auth', 'verified'])->name('dashboard');
 

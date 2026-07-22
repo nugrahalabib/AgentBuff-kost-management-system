@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools;
 
+use App\Mcp\Concerns\AuditsMcpActions;
 use App\Mcp\Concerns\InteractsWithOwner;
 use App\Models\Kamar;
 use App\Models\Transaksi;
@@ -17,7 +18,7 @@ use Laravel\Mcp\Server\Tool;
 #[Description('Catat pembayaran/transaksi manual (langsung terverifikasi) untuk seorang penyewa & tempatkan ke kamar bila belum. Butuh penyewa_id, kamar_id, nominal, durasi (bulan), metode.')]
 class CreateTransaksiTool extends Tool
 {
-    use InteractsWithOwner;
+    use InteractsWithOwner, AuditsMcpActions;
 
     public function handle(Request $request): Response
     {
@@ -42,8 +43,10 @@ class CreateTransaksiTool extends Tool
         $invoice = $prefix . str_pad(($last ? ((int) substr($last->invoice_number, -5)) + 1 : 1), 5, '0', STR_PAD_LEFT);
         $labels = ['cash' => 'TUNAI', 'edc' => 'EDC / MESIN KARTU', 'manual_transfer' => 'TRANSFER MANUAL'];
 
+        $transactionId = null;
+
         try {
-            DB::transaction(function () use ($validated, $tenant, $room, $ownerId, $invoice, $labels) {
+            DB::transaction(function () use ($validated, $tenant, $room, $ownerId, $invoice, $labels, &$transactionId) {
                 // Periode sewa dengan chaining (perpanjangan menyambung dari akhir sewa aktif).
                 $period = app(\App\Services\RoomAllocationService::class)
                     ->computeRentalPeriod($tenant->id, (int) $validated['duration']);
@@ -70,28 +73,39 @@ class CreateTransaksiTool extends Tool
                     'final_amount' => $validated['amount'],
                 ]);
 
+                $transactionId = $transaction->id;
+
                 // Penempatan lewat service bersama (cek kapasitas + reaktivasi pivot).
                 // Kamar penuh -> lempar error -> seluruh transaksi ter-rollback.
                 $result = app(\App\Services\RoomAllocationService::class)->assignRoomAfterPayment($transaction);
                 if (! $result['ok']) {
                     throw new \RuntimeException($result['error']);
                 }
-
-                // Notifikasi owner: transaksi MASUK dicatat via AI agent (MCP).
-                \App\Models\Notification::create([
-                    'user_id' => $ownerId,
-                    'type' => 'payment_received',
-                    'category' => 'finance',
-                    'title' => 'Pemasukan Dicatat (AI Agent)',
-                    'message' => 'Pembayaran Rp ' . number_format((float) $validated['amount'], 0, ',', '.') . ' dari ' . $tenant->name . ' dicatat via AI agent.',
-                    'related_entity_type' => 'transaction',
-                    'related_entity_id' => $transaction->id,
-                    'priority' => 'medium',
-                ]);
             });
         } catch (\RuntimeException $e) {
             return Response::error($e->getMessage());
         }
+
+        $this->logMcp($request, 'create', "Catat transaksi {$invoice} untuk {$tenant->name}");
+        // Owner: notifikasi keuangan (dengan nominal).
+        $this->notifyOwnerMcp(
+            $ownerId,
+            'Pemasukan Dicatat (AI Agent)',
+            'Pembayaran Rp ' . number_format((float) $validated['amount'], 0, ',', '.') . ' dari ' . $tenant->name . ' dicatat via AI agent.',
+            'transaction',
+            $transactionId,
+            'payment_received',
+            'finance',
+            'medium'
+        );
+        // Admin: operasional saja (tanpa nominal).
+        $this->notifyAdminsMcp(
+            $ownerId,
+            'Penyewa Ditempatkan (AI Agent)',
+            "Penyewa {$tenant->name} ditempatkan di kamar {$room->room_number} via AI agent.",
+            'transaction',
+            $transactionId
+        );
 
         return Response::json([
             'success' => true,

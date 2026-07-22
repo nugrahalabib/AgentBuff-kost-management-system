@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools;
 
+use App\Mcp\Concerns\AuditsMcpActions;
 use App\Mcp\Concerns\InteractsWithOwner;
 use App\Models\Penyewa;
 use App\Models\User;
@@ -17,7 +18,7 @@ use Laravel\Mcp\Server\Tool;
 #[Description('Tambah penyewa baru (data internal, tanpa akun login). Penyewa baru BELUM bisa langsung ditempatkan ke kamar karena belum ada pembayaran — jika kamar_id diisi, permintaan ditolak. Untuk menempatkan, gunakan create-transaksi yang mewajibkan pembayaran.')]
 class CreatePenyewaTool extends Tool
 {
-    use InteractsWithOwner;
+    use InteractsWithOwner, AuditsMcpActions;
 
     public function handle(Request $request): Response
     {
@@ -67,6 +68,22 @@ class CreatePenyewaTool extends Tool
 
             return $user;
         });
+
+        $this->logMcp($request, 'create', "Tambah penyewa {$user->name}", $user);
+        $this->notifyOwnerMcp(
+            $ownerId,
+            'Penyewa Baru (AI Agent)',
+            "Penyewa \"{$user->name}\" ditambahkan via AI agent.",
+            'tenant',
+            $user->id
+        );
+        $this->notifyAdminsMcp(
+            $ownerId,
+            'Penyewa Baru (AI Agent)',
+            "Penyewa \"{$user->name}\" ditambahkan via AI agent.",
+            'tenant',
+            $user->id
+        );
 
         return Response::json([
             'success' => true,

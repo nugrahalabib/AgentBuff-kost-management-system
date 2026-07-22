@@ -29,9 +29,13 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
+        // Reset password hanya relevan untuk admin (owner masuk lewat Google).
+        $user = \App\Models\User::where('email', $request->email)->first();
+        if ($user && $user->role !== 'admin') {
+            return back()->withInput($request->only('email'))
+                ->withErrors(['email' => 'Pemilik kos masuk dengan Google — reset password tidak berlaku.']);
+        }
+
         $status = Password::sendResetLink(
             $request->only('email')
         );

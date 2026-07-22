@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AdminActivityLog;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
 
@@ -43,6 +44,7 @@ class LoggerService
      * @param Model|null $model The model being affected
      * @param array|null $oldData Original data before change
      * @param array|null $newData New data after change
+     * @param User|null $actor Aktor eksplisit (MCP Sanctum / failed-login); default Auth::user()
      * @return AdminActivityLog|null
      */
     public static function log(
@@ -50,17 +52,17 @@ class LoggerService
         string $description,
         ?Model $model = null,
         ?array $oldData = null,
-        ?array $newData = null
+        ?array $newData = null,
+        ?User $actor = null
     ) {
         // Strip sensitive fields before they ever touch the audit log table.
         $oldData = self::stripPii($oldData);
         $newData = self::stripPii($newData);
-        // Only log if user is logged in
-        if (!Auth::check()) {
+
+        $user = $actor ?? Auth::user();
+        if (! $user) {
             return null;
         }
-
-        $user = Auth::user();
         
         // Try to find the owner_id
         // If current user is owner, use their ID

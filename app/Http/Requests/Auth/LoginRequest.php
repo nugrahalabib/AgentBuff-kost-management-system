@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -33,7 +34,8 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Attempt to authenticate the request's credentials.
+     * Login email/password HANYA untuk admin.
+     * Owner wajib Google; jangan izinkan password owner lewat sini.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
@@ -41,22 +43,52 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
+        $email = $this->string('email')->toString();
+        $user = User::where('email', $email)->first();
+
+        // Owner / non-admin: tolak sebelum attempt (pesan jelas + tanpa bocorkan hash).
+        if ($user && $user->role !== 'admin') {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'Pemilik kos wajib masuk dengan Google. Form ini hanya untuk admin.',
+            ]);
+        }
+
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
-            // Try to find user to log the attempt against (if user exists but password wrong)
-            $user = \App\Models\User::where('email', $this->input('email'))->first();
-            
             if ($user && $user->role === 'admin') {
                 \App\Services\LoggerService::log(
                     'login_failed',
                     'Gagal login: Password salah',
+                    $user,
+                    null,
+                    null,
                     $user
                 );
             }
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
+            ]);
+        }
+
+        // Double-check setelah attempt (defense in depth).
+        if (Auth::user()->role !== 'admin') {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'Pemilik kos wajib masuk dengan Google. Form ini hanya untuk admin.',
+            ]);
+        }
+
+        if (Auth::user()->status === 'inactive') {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Akun admin dinonaktifkan. Hubungi pemilik kos.',
             ]);
         }
 
@@ -84,6 +116,14 @@ class LoginRequest extends FormRequest
                 'minutes' => ceil($seconds / 60),
             ]),
         ]);
+    }
+
+    /**
+     * Gagal login admin → kembali ke landing (modal admin).
+     */
+    protected function getRedirectUrl(): string
+    {
+        return route('welcome', ['auth' => 'admin']);
     }
 
     /**

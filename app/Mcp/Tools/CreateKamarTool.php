@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools;
 
+use App\Mcp\Concerns\AuditsMcpActions;
 use App\Mcp\Concerns\InteractsWithOwner;
 use App\Models\Kamar;
 use App\Models\TipeKamar;
@@ -15,7 +16,7 @@ use Laravel\Mcp\Server\Tool;
 #[Description('Tambah kamar baru ke kos ini. Butuh nomor kamar (unik), lantai, tipe_kamar_id (lihat list-tipe-kamar), dan status awal (available/maintenance).')]
 class CreateKamarTool extends Tool
 {
-    use InteractsWithOwner;
+    use InteractsWithOwner, AuditsMcpActions;
 
     public function handle(Request $request): Response
     {
@@ -41,6 +42,22 @@ class CreateKamarTool extends Tool
             'status' => $validated['status'] ?? 'available',
             'price_per_month' => $type->price_per_month,
         ]);
+
+        $this->logMcp($request, 'create', "Tambah kamar {$room->room_number}", $room);
+        $this->notifyOwnerMcp(
+            $ownerId,
+            'Kamar Baru (AI Agent)',
+            "Kamar {$room->room_number} ditambahkan via AI agent.",
+            'room',
+            $room->id
+        );
+        $this->notifyAdminsMcp(
+            $ownerId,
+            'Kamar Baru (AI Agent)',
+            "Kamar {$room->room_number} ditambahkan via AI agent.",
+            'room',
+            $room->id
+        );
 
         return Response::json([
             'success' => true,

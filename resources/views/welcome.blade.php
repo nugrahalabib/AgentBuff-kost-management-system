@@ -10,10 +10,29 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-white text-gray-800 antialiased">
+@php
+    $initialAuth = old('_auth_form', request('auth'));
+    // 'admin' = buka modal login + form admin; selain itu login|register|null
+    $initialAdminLogin = false;
+    if ($initialAuth === 'admin') {
+        $initialAuth = 'login';
+        $initialAdminLogin = true;
+    } elseif (! in_array($initialAuth, ['login', 'register'], true)) {
+        $initialAuth = null;
+    }
+    // Gagal validasi form admin → buka form admin
+    if (old('_auth_form') === 'admin') {
+        $initialAuth = 'login';
+        $initialAdminLogin = true;
+    }
+@endphp
+<body
+    x-data="{ authModal: @js($initialAuth), adminLogin: @js($initialAdminLogin), open: false, scrolled: false }"
+    class="bg-white text-gray-800 antialiased"
+>
 
     {{-- ===================== NAVBAR ===================== --}}
-    <header x-data="{ open: false, scrolled: false }" @scroll.window="scrolled = window.scrollY > 20"
+    <header @scroll.window="scrolled = window.scrollY > 20"
         class="fixed top-0 inset-x-0 z-50 transition-all duration-300"
         :class="scrolled ? 'bg-white/90 backdrop-blur shadow-sm' : 'bg-transparent'">
         <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -37,8 +56,8 @@
                     @auth
                         <a href="{{ route('dashboard') }}" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-md hover:bg-emerald-700 transition">Dashboard</a>
                     @else
-                        <a href="{{ route('login') }}" class="px-4 py-2.5 text-sm font-bold text-gray-700 hover:text-emerald-700 transition">Masuk</a>
-                        <a href="{{ route('register') }}" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-md hover:bg-emerald-700 transition">Mulai Gratis</a>
+                        <button type="button" @click="authModal = 'login'" class="px-4 py-2.5 text-sm font-bold text-gray-700 hover:text-emerald-700 transition">Masuk</button>
+                        <button type="button" @click="authModal = 'register'" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-md hover:bg-emerald-700 transition">Mulai Gratis</button>
                     @endauth
                 </div>
 
@@ -60,8 +79,8 @@
                     @auth
                         <a href="{{ route('dashboard') }}" class="flex-1 text-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold">Dashboard</a>
                     @else
-                        <a href="{{ route('login') }}" class="flex-1 text-center px-4 py-2.5 rounded-xl border border-gray-300 text-sm font-bold">Masuk</a>
-                        <a href="{{ route('register') }}" class="flex-1 text-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold">Mulai Gratis</a>
+                        <button type="button" @click="open=false; authModal='login'" class="flex-1 text-center px-4 py-2.5 rounded-xl border border-gray-300 text-sm font-bold">Masuk</button>
+                        <button type="button" @click="open=false; authModal='register'" class="flex-1 text-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold">Mulai Gratis</button>
                     @endauth
                 </div>
             </div>
@@ -105,10 +124,17 @@
                     </p>
 
                     <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                        <a href="{{ route('register') }}" class="group px-7 py-3.5 rounded-xl bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/25 hover:bg-emerald-700 transition transform hover:scale-105 inline-flex items-center justify-center gap-2">
-                            Mulai Gratis
-                            <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                        </a>
+                        @auth
+                            <a href="{{ route('dashboard') }}" class="group px-7 py-3.5 rounded-xl bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/25 hover:bg-emerald-700 transition transform hover:scale-105 inline-flex items-center justify-center gap-2">
+                                Buka Dashboard
+                                <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                            </a>
+                        @else
+                            <button type="button" @click="authModal = 'register'" class="group px-7 py-3.5 rounded-xl bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/25 hover:bg-emerald-700 transition transform hover:scale-105 inline-flex items-center justify-center gap-2">
+                                Mulai Gratis
+                                <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                            </button>
+                        @endauth
                         <a href="#fitur" class="px-7 py-3.5 rounded-xl bg-white/80 backdrop-blur border border-gray-200 text-gray-700 font-bold shadow-sm hover:bg-white hover:border-emerald-200 transition inline-flex items-center justify-center gap-2 dark:bg-white/5 dark:hover:bg-white/10">
                             <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             Lihat Fitur
@@ -131,7 +157,7 @@
                                 <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
                                 <span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
                                 <span class="w-2.5 h-2.5 rounded-full bg-green-400"></span>
-                                <span class="ml-3 text-[11px] font-medium text-gray-400">kostcloud.app/dashboard</span>
+                                <span class="ml-3 text-[11px] font-medium text-gray-400">kos.agentbuff.id/dashboard</span>
                             </div>
                             {{-- Body: sidebar + konten --}}
                             <div class="flex">
@@ -242,7 +268,7 @@
             <div class="flex flex-col lg:flex-row items-center justify-center gap-x-8 gap-y-4 scroll-reveal">
                 <p class="text-xs font-bold uppercase tracking-widest text-gray-400 shrink-0">Kompatibel dengan AI agent</p>
                 <div class="flex flex-wrap items-center justify-center gap-2.5">
-                    @foreach(['Claude Code', 'Codex', 'Hermes Agent', 'OpenClaw'] as $agent)
+                    @foreach(['Claude Code', 'Codex', 'Hermes Agent', 'OpenClaw', 'Agentbuff'] as $agent)
                         <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 border border-gray-100 text-sm font-bold text-gray-700 hover:border-emerald-200 hover:text-emerald-700 transition">
                             <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                             {{ $agent }}
@@ -441,7 +467,7 @@
                         semuanya lewat MCP, aman dalam batas kos-mu sendiri.
                     </p>
                     <ul class="mt-7 grid sm:grid-cols-2 gap-3">
-                        @foreach(['Claude Code', 'Codex', 'Hermes Agent', 'OpenClaw'] as $agent)
+                        @foreach(['Claude Code', 'Codex', 'Hermes Agent', 'OpenClaw', 'Agentbuff'] as $agent)
                             <li class="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-100">
                                 <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -467,7 +493,7 @@
   <span class="text-emerald-300">"mcpServers"</span>: {
     <span class="text-emerald-300">"kostcloud"</span>: {
       <span class="text-sky-300">"type"</span>: <span class="text-amber-200">"http"</span>,
-      <span class="text-sky-300">"url"</span>: <span class="text-amber-200">"https://kostcloud.app/mcp"</span>,
+      <span class="text-sky-300">"url"</span>: <span class="text-amber-200">"https://kos.agentbuff.id/mcp"</span>,
       <span class="text-sky-300">"headers"</span>: {
         <span class="text-sky-300">"Authorization"</span>: <span class="text-amber-200">"Bearer kc_live_&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"</span>
       }
@@ -476,7 +502,7 @@
 }</code></pre>
                             <div class="px-5 py-3 border-t border-white/10 flex items-center gap-2 text-xs font-mono text-emerald-300">
                                 <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
-                                terhubung &middot; 12 tools tersedia
+                                terhubung &middot; 14 tools tersedia
                             </div>
                         </div>
                     </div>
@@ -500,13 +526,13 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                     </a>
                 @else
-                    <a href="{{ route('register') }}" class="btn-on-emerald inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-emerald-700 font-extrabold shadow-lg hover:bg-emerald-50 transition transform hover:scale-105">
+                    <button type="button" @click="authModal = 'register'" class="btn-on-emerald inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-emerald-700 font-extrabold shadow-lg hover:bg-emerald-50 transition transform hover:scale-105">
                         Daftar Sekarang
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                    </a>
-                    <a href="{{ route('login') }}" class="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-emerald-500/30 text-white font-bold border border-white/30 backdrop-blur hover:bg-emerald-500/50 transition">
+                    </button>
+                    <button type="button" @click="authModal = 'login'" class="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-emerald-500/30 text-white font-bold border border-white/30 backdrop-blur hover:bg-emerald-500/50 transition">
                         Sudah punya akun? Masuk
-                    </a>
+                    </button>
                 @endauth
             </div>
             <p class="mt-5 text-xs text-emerald-100">Tanpa kartu kredit &middot; Data kos terpisah &amp; aman</p>
@@ -526,7 +552,7 @@
                 <nav class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium text-gray-500">
                     <a href="#fitur" class="hover:text-emerald-700 transition">Fitur</a>
                     <a href="#mcp" class="hover:text-emerald-700 transition">AI Agent (MCP)</a>
-                    <a href="{{ route('register') }}" class="hover:text-emerald-700 transition">Mulai Gratis</a>
+                    <button type="button" @click="authModal = 'register'" class="hover:text-emerald-700 transition">Mulai Gratis</button>
                 </nav>
             </div>
             <div class="mt-8 pt-6 border-t border-gray-100 text-center sm:text-left">
@@ -603,5 +629,7 @@
     counters.forEach(function (el) { cObserver.observe(el); });
 })();
 </script>
+
+    @include('partials.auth-modals')
 </body>
 </html>

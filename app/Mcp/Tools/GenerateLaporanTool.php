@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools;
 
+use App\Mcp\Concerns\AuditsMcpActions;
 use App\Mcp\Concerns\InteractsWithOwner;
 use App\Services\ReportService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -13,7 +14,7 @@ use Laravel\Mcp\Server\Tool;
 #[Description('Hasilkan data laporan kos untuk periode tertentu. Jenis: financial_report (keuangan), room_status_report (status kamar), tenant_report (penyewa).')]
 class GenerateLaporanTool extends Tool
 {
-    use InteractsWithOwner;
+    use InteractsWithOwner, AuditsMcpActions;
 
     public function handle(Request $request): Response
     {
@@ -44,9 +45,30 @@ class GenerateLaporanTool extends Tool
             'tenant_report' => $service->generateTenantReport($owner, $data),
         };
 
+        $periode = sprintf('%02d-%d', $month, $year);
+        $this->logMcp($request, 'generate_report', "Generate laporan {$validated['report_type']} {$periode}");
+        $this->notifyOwnerMcp(
+            $ownerId,
+            'Laporan Dihasilkan (AI Agent)',
+            "Laporan {$validated['report_type']} periode {$periode} dihasilkan via AI agent.",
+            null,
+            null,
+            'info',
+            'system',
+            'low'
+        );
+        // Admin: hanya laporan operasional (bukan keuangan).
+        if ($validated['report_type'] !== 'financial_report') {
+            $this->notifyAdminsMcp(
+                $ownerId,
+                'Laporan Dihasilkan (AI Agent)',
+                "Laporan {$validated['report_type']} periode {$periode} dihasilkan via AI agent."
+            );
+        }
+
         return Response::json([
             'jenis' => $validated['report_type'],
-            'periode' => sprintf('%02d-%d', $month, $year),
+            'periode' => $periode,
             'data' => $reportData,
         ]);
     }

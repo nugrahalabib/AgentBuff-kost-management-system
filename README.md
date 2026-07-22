@@ -12,7 +12,7 @@ workspace terpisah untuk mengelola kamar, penyewa, transaksi, dan laporan — ta
 - **Backend:** Laravel 12, PHP 8.3
 - **Frontend:** Tailwind CSS 3, Alpine.js, Vite, driver.js (tur onboarding)
 - **Database:** MySQL 8
-- **Auth:** Laravel Breeze + Laravel Sanctum (bearer token untuk MCP)
+- **Auth:** Google OAuth (owner) + email/password (admin) + Sanctum (MCP)
 - **AI/MCP:** Laravel MCP (server HTTP `/mcp`)
 - **Export:** DomPDF (PDF), PhpSpreadsheet (Excel)
 
@@ -20,8 +20,8 @@ workspace terpisah untuk mengelola kamar, penyewa, transaksi, dan laporan — ta
 
 | Peran | Keterangan |
 |-------|-----------|
-| **Pemilik Kos (owner)** | Mendaftar sendiri (subscription). Akses penuh: kamar, penyewa, transaksi, laporan, pengaturan, kelola admin, token MCP. |
-| **Admin** | Opsional — dibuat oleh owner. Akses manajemen setara owner; datanya tersinkron dengan owner. |
+| **Pemilik Kos (owner)** | Daftar & masuk **hanya dengan Google**. Akses penuh: kamar, penyewa, transaksi, laporan, pengaturan, kelola admin, token MCP. |
+| **Admin** | Opsional — dibuat oleh owner. Masuk dengan **email & password**. Data tersinkron dengan owner. |
 | **Penyewa** | Bukan akun login — hanya **data internal** yang dikelola owner/admin. |
 
 ## Menjalankan dengan Docker
@@ -36,18 +36,18 @@ Buka **http://localhost:8000**. Container menjalankan migrasi + seeder otomatis.
 
 ### Akun default (hasil seeder)
 
-| Peran | Email | Password |
-|-------|-------|----------|
-| Owner | `owner1@kosadmin.local` | `password123` |
-| Admin | `admin@kosadmin.local` | `password123` |
+| Peran | Cara masuk |
+|-------|------------|
+| Owner | **Google OAuth** di halaman awal (butuh `GOOGLE_CLIENT_*` di `.env`) |
+| Admin | `admin@kosadmin.local` / `password123` |
 
-Atau **daftar owner baru** di `/register` (workspace langsung kosong).
+Atau **daftar owner baru** di halaman awal → **Daftar dengan Google**.
 
 Perintah lain: `docker compose logs -f app`, `docker compose stop`, `docker compose down -v` (reset DB).
 
 ## Integrasi AI Agent (MCP)
 
-1. Login owner/admin → menu **MCP / AI Agent** → **Generate Token**.
+1. Login owner → menu **MCP / AI Agent** → **Generate Token**.
 2. Berikan URL + bearer token ke AI agent (Claude Code, Codex, Hermes, OpenClaw, dll):
 
 ```json
@@ -55,16 +55,18 @@ Perintah lain: `docker compose logs -f app`, `docker compose stop`, `docker comp
   "mcpServers": {
     "kostcloud": {
       "type": "http",
-      "url": "http://localhost:8000/mcp",
+      "url": "https://kos.agentbuff.id/mcp",
       "headers": { "Authorization": "Bearer <TOKEN_ANDA>" }
     }
   }
 }
 ```
 
-Tool yang tersedia (semua otomatis di-scope ke kos pemilik token): ringkasan dashboard, daftar/tambah
-kamar, ubah status kamar, daftar tipe kamar, daftar/tambah penyewa (+ tempatkan ke kamar),
-daftar/catat transaksi, dan generate laporan.
+Untuk lokal Docker, ganti URL menjadi `http://localhost:8000/mcp`.
+
+Tool yang tersedia (semua otomatis di-scope ke kos pemilik token): ringkasan dashboard, daftar/tambah/hapus
+kamar, ubah status kamar, daftar/hapus tipe kamar, daftar/tambah/hapus penyewa (+ tempatkan ke kamar),
+daftar/catat/hapus transaksi, dan generate laporan.
 
 ## Pengembangan lokal (tanpa Docker penuh)
 

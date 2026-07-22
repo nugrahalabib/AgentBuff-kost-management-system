@@ -14,6 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Apply hardening headers to every response.
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
+        // Guest yang butuh auth diarahkan ke landing (modal login), bukan /login lama.
+        $middleware->redirectGuestsTo(fn () => route('welcome', ['auth' => 'login']));
+        $middleware->redirectUsersTo(fn () => route('dashboard'));
+
         // Trust the reverse proxy in front of the app (Nginx Proxy Manager, Cloudflare,
         // etc.) so X-Forwarded-Proto / Host headers are respected. Without this, Laravel
         // generates http:// URLs even when the public request was https://, and CSRF

@@ -10,33 +10,57 @@ class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_login_screen_can_be_rendered(): void
+    public function test_login_screen_redirects_to_welcome(): void
     {
         $response = $this->get('/login');
 
-        $response->assertStatus(200);
+        $response->assertRedirect(route('welcome', ['auth' => 'login']));
     }
 
-    public function test_users_can_authenticate_using_the_login_screen(): void
+    public function test_admin_can_authenticate_with_password(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'role' => 'admin',
+            'status' => 'active',
+        ]);
 
         $response = $this->post('/login', [
             'email' => $user->email,
             'password' => 'password',
+            '_auth_form' => 'admin',
         ]);
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
     }
 
+    public function test_owner_cannot_authenticate_with_password(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+
+        $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+            '_auth_form' => 'admin',
+        ]);
+
+        $this->assertGuest();
+    }
+
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'role' => 'admin',
+            'status' => 'active',
+        ]);
 
         $this->post('/login', [
             'email' => $user->email,
             'password' => 'wrong-password',
+            '_auth_form' => 'admin',
         ]);
 
         $this->assertGuest();
@@ -44,7 +68,10 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_logout(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'role' => 'admin',
+            'status' => 'active',
+        ]);
 
         $response = $this->actingAs($user)->post('/logout');
 
