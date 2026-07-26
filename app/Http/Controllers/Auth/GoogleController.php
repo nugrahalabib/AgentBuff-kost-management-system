@@ -54,6 +54,17 @@ class GoogleController extends Controller
                 ->with('error', 'Akun Google tidak memberikan email. Tidak bisa melanjutkan.');
         }
 
+        // Gerbang marketplace AgentBuff: owner hanya boleh masuk/mendaftar bila akun
+        // AgentBuff-nya LIVE (langganan/trial aktif) DAN sudah membeli KostCloud.
+        // Admin masuk lewat email/password (bukan Google), jadi gate ini menutup
+        // jalur owner. Inert bila gate dimatikan (dev standalone).
+        $abGate = app(\App\Services\AgentBuffGate::class);
+        $ent = $abGate->checkEntitlementStrict($email);
+        if (! ($ent['entitled'] ?? false)) {
+            return redirect()->route('welcome', ['auth' => 'login'])
+                ->with('error', $abGate->message($ent['reason'] ?? 'access_lapsed'));
+        }
+
         $user = User::where('google_id', $googleUser->getId())->first()
             ?? User::where('email', $email)->first();
 

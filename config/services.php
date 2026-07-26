@@ -41,4 +41,14 @@ return [
         ],
     ],
 
+    // Gerbang marketplace AgentBuff — hanya pembeli terdaftar + akses aktif yang
+    // boleh masuk. Lihat App\Services\AgentBuffGate. gate_disabled=true hanya untuk
+    // menjalankan KostCloud standalone (dev tanpa AgentBuff).
+    'agentbuff' => [
+        'entitlement_url' => env('AGENTBUFF_ENTITLEMENT_URL'),
+        'partner_secret' => env('AGENTBUFF_PARTNER_SECRET'),
+        'product_key' => env('KOSTCLOUD_PRODUCT_KEY', 'kostcloud'),
+        'gate_disabled' => env('AGENTBUFF_GATE_DISABLED', false),
+    ],
+
 ];

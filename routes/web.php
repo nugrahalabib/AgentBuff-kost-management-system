@@ -72,7 +72,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Route owner
     Route::prefix('owner')
         ->name('owner.')
-        ->middleware(['auth', 'verified', 'role:owner'])
+        ->middleware(['auth', 'verified', 'role:owner', \App\Http\Middleware\EnsureCompanyActive::class])
         ->group(function () {
 
             // 1. Dashboard Owner
@@ -150,7 +150,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     // Route admin
-    Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'role:admin', 'log.admin.activity'])->group(function () {
+    Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'role:admin', 'log.admin.activity', \App\Http\Middleware\EnsureCompanyActive::class])->group(function () {
 
         // Dashboard Admin
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');

@@ -12,4 +12,4 @@ use Laravel\Mcp\Facades\Mcp;
 | Semua tool otomatis di-scope ke kos milik pemilik token.
 */
 Mcp::web('/mcp', KostCloudServer::class)
-    ->middleware(['auth:sanctum']);
+    ->middleware(['auth:sanctum', \App\Http\Middleware\EnsureCompanyActive::class]);
