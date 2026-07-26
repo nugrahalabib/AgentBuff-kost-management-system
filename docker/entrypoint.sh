@@ -12,12 +12,17 @@ cd /var/www/html
 # ---------------------------------------------------------------------------
 set_env() {
     key="$1"; val="$2"
-    if grep -qE "^${key}=" .env 2>/dev/null; then
-        esc=$(printf '%s' "$val" | sed -e 's/[&|\\]/\\&/g')
-        sed -i "s|^${key}=.*|${key}=${esc}|" .env
-    else
-        printf '%s=%s\n' "$key" "$val" >> .env
+    # Escape nilai untuk .env berkutip-ganda: backslash, kutip-ganda, dan $ (cegah
+    # interpolasi). Berkutip supaya nilai berspasi (APP_NAME), base64 (APP_KEY, ada
+    # +/=), dan URL aman diparse dotenv.
+    esc=$(printf '%s' "$val" | sed -e 's/[\\"$]/\\&/g')
+    # Hapus baris lama (kalau ada) lalu tulis ulang berkutip — hindari escaping
+    # sisi-ganti sed yang rapuh untuk nilai kompleks.
+    if [ -f .env ]; then
+        grep -v "^${key}=" .env > .env.tmp 2>/dev/null || true
+        mv .env.tmp .env
     fi
+    printf '%s="%s"\n' "$key" "$esc" >> .env
 }
 
 for k in APP_NAME APP_ENV APP_KEY APP_DEBUG APP_URL \
